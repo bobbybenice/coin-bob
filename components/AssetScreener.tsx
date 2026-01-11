@@ -231,7 +231,7 @@ export default function AssetScreener() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-auto custom-scrollbar">
+      <div className="flex-1 overflow-auto custom-scrollbar w-full">
         {isLoading && assets.length === 0 ? (
           <div className="w-full h-full flex flex-col items-center justify-center text-zinc-500 gap-4">
             <div className="relative">
@@ -245,7 +245,7 @@ export default function AssetScreener() {
             <thead className="sticky top-0 z-20 bg-background/80 backdrop-blur-md shadow-sm border-b border-border">
               <tr>
                 <th
-                  className="py-3 px-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider cursor-pointer hover:text-zinc-300 transition-colors select-none"
+                  className="py-3 px-2 lg:px-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider cursor-pointer hover:text-zinc-300 transition-colors select-none whitespace-nowrap"
                   onClick={() => handleSort('symbol')}
                 >
                   Asset <SortIcon field="symbol" />
@@ -293,7 +293,7 @@ export default function AssetScreener() {
                     onClick={() => setActiveAsset(isActive ? null : asset.symbol)}
                     className={`group transition-colors cursor-pointer ${isActive ? 'bg-emerald-500/10 hover:bg-emerald-500/20' : 'hover:bg-muted/50'}`}
                   >
-                    <td className="py-2.5 px-4">
+                    <td className="py-2.5 px-2 lg:px-4">
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 rounded-full bg-muted ring-1 ring-border flex items-center justify-center text-[10px] font-bold text-muted-foreground group-hover:text-foreground group-hover:ring-emerald-500/30 transition-all">
                           {asset.symbol[0]}

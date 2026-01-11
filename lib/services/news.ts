@@ -28,21 +28,26 @@ export async function fetchCryptoNews(): Promise<NewsItem[]> {
 
     if (!apiKey) {
         console.error("Missing CRYPTOPANIC_API_KEY environment variable");
-        throw new Error("Service Configuration Error: Missing API Key");
+        throw new Error("News Feed Unavailable: API Key Missing");
     }
 
     try {
-        // Use developer v2 endpoint as verified - REMOVED filter=important to ensure BTC/market breadth
+        // Use developer v2 endpoint as verified
         const url = `https://cryptopanic.com/api/developer/v2/posts/?auth_token=${apiKey}&public=true`;
 
         const response = await fetch(url, {
-            cache: 'no-store',
+            next: { revalidate: 900 }, // Cache for 15 minutes
             headers: {
                 'User-Agent': 'CoinBob/1.0 (Node.js)'
             }
         });
 
+        // Handle Rate Limiting (429) or other Client/Server errors gracefully
         if (!response.ok) {
+            if (response.status === 429) {
+                console.warn(`CryptoPanic Rate Limit Hit (429).`);
+                throw new Error("News Feed Rate Limited. Please try again later.");
+            }
             throw new Error(`Upstream API Error: ${response.status} ${response.statusText}`);
         }
 

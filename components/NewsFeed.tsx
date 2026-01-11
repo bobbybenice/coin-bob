@@ -1,32 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { fetchCryptoNews } from '@/lib/services/news';
-import { NewsItem } from '@/lib/types';
+import { useNews } from '@/lib/hooks/useNews';
 import { useUserStore } from '@/lib/store';
 
 export default function NewsFeed() {
     const { activeAsset } = useUserStore();
-    const [news, setNews] = useState<NewsItem[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-
-    const loadNews = async () => {
-        setLoading(true);
-        setError(null);
-        try {
-            const data = await fetchCryptoNews();
-            setNews(data);
-        } catch (err) {
-            setError(err instanceof Error ? err.message : "Service Unavailable");
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        loadNews();
-    }, []);
+    const { news, isLoading: loading, error, refresh } = useNews();
 
     return (
         <div className="flex flex-col h-full bg-card overflow-hidden relative group">
@@ -37,7 +16,7 @@ export default function NewsFeed() {
                 </h2>
                 <div className="flex items-center gap-2">
                     <button
-                        onClick={loadNews}
+                        onClick={refresh}
                         disabled={loading}
                         className="text-[10px] text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
                         title="Refresh"
@@ -60,7 +39,7 @@ export default function NewsFeed() {
                             <p className="text-muted-foreground text-xs mt-1 font-mono">{error}</p>
                         </div>
                         <button
-                            onClick={loadNews}
+                            onClick={refresh}
                             className="px-4 py-2 bg-muted hover:bg-muted/80 text-muted-foreground hover:text-foreground text-xs rounded-lg border border-border transition-all font-medium"
                         >
                             Retry Connection

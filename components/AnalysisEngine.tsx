@@ -10,7 +10,7 @@ export default function AnalysisEngine() {
     const { filters } = settings;
 
     return (
-        <div className="flex flex-col h-full bg-transparent overflow-hidden">
+        <div className="flex flex-col h-auto lg:h-full bg-transparent overflow-hidden">
             <div className="p-4 border-b border-border bg-card flex justify-between items-center shrink-0 backdrop-blur-sm">
                 <h2 className="text-sm font-medium text-foreground tracking-tight flex items-center gap-2 uppercase">
                     <span className="w-1.5 h-1.5 rounded-sm bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.5)]" />
