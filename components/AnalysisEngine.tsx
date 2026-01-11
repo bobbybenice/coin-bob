@@ -55,9 +55,8 @@ export default function AnalysisEngine() {
                             <div className="relative flex items-center">
                                 <input
                                     type="checkbox"
-                                    // @ts-ignore
+                                    // @ts-expect-error - Filters object is dynamic
                                     checked={filters[item.key]}
-                                    // @ts-ignore
                                     onChange={(e) => updateFilters({ [item.key]: e.target.checked })}
                                     className={`peer appearance-none w-5 h-5 rounded border border-input bg-background checked:bg-${item.color}-500 checked:border-${item.color}-500 transition-colors cursor-pointer`}
                                 />
@@ -83,9 +82,8 @@ export default function AnalysisEngine() {
                             <div className="relative flex items-center">
                                 <input
                                     type="checkbox"
-                                    // @ts-ignore
+                                    // @ts-expect-error - Filters object is dynamic
                                     checked={filters[item.key]}
-                                    // @ts-ignore
                                     onChange={(e) => updateFilters({ [item.key]: e.target.checked })}
                                     className={`peer appearance-none w-5 h-5 rounded border border-input bg-background checked:bg-${item.color}-500 checked:border-${item.color}-500 transition-colors cursor-pointer`}
                                 />

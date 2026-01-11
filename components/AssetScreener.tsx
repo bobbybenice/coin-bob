@@ -68,7 +68,8 @@ export default function AssetScreener() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isSearchOpen]);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isSearchOpen, searchQuery]);
 
   // Focus input when search opens
   useEffect(() => {
@@ -283,7 +284,7 @@ export default function AssetScreener() {
                 const isGolden = asset.ema50 && asset.ema200 && asset.ema50 > asset.ema200;
                 const isUptrend = asset.ema20 && asset.price > asset.ema20;
                 const isMacd = asset.macd && asset.macd.histogram && asset.macd.histogram > 0;
-                const isBbLow = asset.bb && asset.price < asset.bb.lower;
+                // const isBbLow = asset.bb && asset.price < asset.bb.lower;
                 const isActive = activeAsset === asset.symbol;
 
                 return (

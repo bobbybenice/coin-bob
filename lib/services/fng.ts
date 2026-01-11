@@ -1,9 +1,4 @@
-// CMC Response Shape (Inferred, will verify in dev)
-interface CmcFngData {
-    value: number;
-    value_classification: string;
-    update_time: string;
-}
+
 
 export interface FearAndGreedData {
     value: number;

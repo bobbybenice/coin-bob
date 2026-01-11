@@ -44,7 +44,7 @@ interface BinanceTicker {
 }
 
 const assetHistory: Record<string, number[]> = {};
-let latestAssets: Asset[] = [];
+const latestAssets: Asset[] = [];
 
 // 2. Batch Loader for History
 async function fetchHistoryBatch(symbols: string[]) {
@@ -67,16 +67,19 @@ async function fetchHistory(symbol: string) {
         {
             name: 'CryptoCompare',
             url: `https://min-api.cryptocompare.com/data/v2/histoday?fsym=${baseSymbol}&tsym=USD&limit=250`,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             adapter: (json: any) => json.Data.Data.map((d: any) => d.close)
         },
         {
             name: 'Binance Global',
             url: `https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=1d&limit=250`,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             adapter: (json: any) => json.map((d: any[]) => parseFloat(d[4]))
         },
         {
             name: 'Binance US',
             url: `https://api.binance.us/api/v3/klines?symbol=${symbol}&interval=1d&limit=250`,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             adapter: (json: any) => json.map((d: any[]) => parseFloat(d[4]))
         }
     ];
@@ -93,7 +96,7 @@ async function fetchHistory(symbol: string) {
 
             assetHistory[symbol] = closePrices;
             return;
-        } catch (e) {
+        } catch {
             // ignore
         }
     }

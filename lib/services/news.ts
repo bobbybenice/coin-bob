@@ -128,7 +128,7 @@ export async function fetchCryptoNews(): Promise<NewsItem[]> {
                 domain: item.domain || 'cryptopanic.com',
                 published_at: item.published_at,
                 currencies: inferredCurrencies,
-                votes: votes as any, // Cast because we might have mocked an empty object
+                votes: votes as unknown as CryptoPanicPost['votes'], // Cast because we might have mocked an empty object
                 sentiment,
                 score
             } as NewsItem;
