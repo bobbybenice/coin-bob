@@ -1,40 +1,7 @@
 import { Asset } from './types';
 import { RSI, EMA, MACD, BollingerBands } from 'technicalindicators';
-
-// 1. Scale Up: Top 50 Assets + Memes + L1s
-// 1. Scale Up: Top 50 Assets + Memes + L1s
-export const WATCHLIST = [
-    'BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'BNBUSDT', 'XRPUSDT',
-    'DOGEUSDT', 'ADAUSDT', 'SHIBUSDT', 'AVAXUSDT', 'TONUSDT',
-    'DOTUSDT', 'LINKUSDT', 'BCHUSDT', 'NEARUSDT', 'MATICUSDT',
-    'LTCUSDT', 'PEPEUSDT', 'ICPUSDT', 'UNIUSDT', 'APTUSDT',
-    'ARBUSDT', 'RNDRUSDT', 'HBARUSDT', 'FILUSDT', 'ETCUSDT',
-    'STXUSDT', 'IMXUSDT', 'KASUSDT', 'WIFUSDT', 'FLOKIUSDT',
-    'BONKUSDT', 'SUIUSDT', 'VETUSDT', 'OPUSDT', 'TAOUSDT',
-    'GRTUSDT', 'AAVEUSDT', 'ALGOUSDT', 'THETAUSDT', 'OMUSDT',
-    'RUNEUSDT', 'EGLDUSDT', 'FETUSDT', 'SANDUSDT', 'MKRUSDT',
-    'FANTOMUSDT', 'SEIUSDT', 'TIAUSDT', 'JUPUSDT', 'LDOUSDT'
-];
-
-// Helper to format names nicely
-const formatName = (symbol: string) => {
-    const s = symbol.replace('USDT', '');
-    return s.charAt(0) + s.slice(1).toLowerCase();
-};
-
-export const SYMBOL_MAP: Record<string, { id: string, name: string }> = {};
-// Auto-generate map
-WATCHLIST.forEach(s => {
-    SYMBOL_MAP[s] = { id: s.toLowerCase(), name: formatName(s) };
-});
-
-// Override specific names
-Object.assign(SYMBOL_MAP, {
-    'BTCUSDT': { id: 'bitcoin', name: 'Bitcoin' },
-    'ETHUSDT': { id: 'ethereum', name: 'Ethereum' },
-    'SOLUSDT': { id: 'solana', name: 'Solana' },
-    'DOGEUSDT': { id: 'dogecoin', name: 'Dogecoin' }
-});
+import { WATCHLIST, SYMBOL_MAP } from './constants';
+import { fetchHistoricalData } from '@/lib/services/market';
 
 interface BinanceTicker {
     s: string;
@@ -58,55 +25,33 @@ async function fetchHistoryBatch(symbols: string[]) {
     }
 }
 
+
+
 async function fetchHistory(symbol: string) {
     if (assetHistory[symbol] && assetHistory[symbol].length > 50) return;
 
-    const baseSymbol = symbol.replace('USDT', '');
-
-    const sources = [
-        {
-            name: 'CryptoCompare',
-            url: `https://min-api.cryptocompare.com/data/v2/histoday?fsym=${baseSymbol}&tsym=USD&limit=250`,
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            adapter: (json: any) => json.Data.Data.map((d: any) => d.close)
-        },
-        {
-            name: 'Binance Global',
-            url: `https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=1d&limit=250`,
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            adapter: (json: any) => json.map((d: any[]) => parseFloat(d[4]))
-        },
-        {
-            name: 'Binance US',
-            url: `https://api.binance.us/api/v3/klines?symbol=${symbol}&interval=1d&limit=250`,
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            adapter: (json: any) => json.map((d: any[]) => parseFloat(d[4]))
+    try {
+        const history = await fetchHistoricalData(symbol);
+        if (history && history.length > 0) {
+            assetHistory[symbol] = history;
+        } else {
+            if (!assetHistory[symbol]) assetHistory[symbol] = [];
         }
-    ];
-
-    for (const source of sources) {
-        try {
-            const res = await fetch(source.url);
-            if (!res.ok) continue;
-
-            const json = await res.json();
-            const closePrices = source.adapter(json);
-
-            if (!Array.isArray(closePrices) || closePrices.length < 100) continue;
-
-            assetHistory[symbol] = closePrices;
-            return;
-        } catch {
-            // ignore
-        }
+    } catch (e) {
+        console.error(`Failed to load history for ${symbol}`, e);
+        if (!assetHistory[symbol]) assetHistory[symbol] = [];
     }
-
-    if (!assetHistory[symbol]) assetHistory[symbol] = [];
 }
 
+// Flag to prevent double-fetching in React Strict Mode
+let isHistoryFetching = false;
+
 export function subscribeToBinanceStream(callback: (assets: Asset[]) => void) {
-    // Start Batch Load in background
-    fetchHistoryBatch(WATCHLIST);
+    // Start Batch Load in background, but only once
+    if (!isHistoryFetching) {
+        isHistoryFetching = true;
+        fetchHistoryBatch(WATCHLIST);
+    }
 
     const ws = new WebSocket('wss://stream.binance.com:9443/ws/!ticker@arr');
     let hasUpdates = false;

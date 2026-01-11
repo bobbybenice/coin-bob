@@ -3,11 +3,13 @@
 import { useUserStore } from '@/lib/store';
 import { useMarketData } from '@/lib/hooks/useMarketData';
 import { useNews } from '@/lib/hooks/useNews';
+import { useWhaleData } from '@/lib/hooks/useWhaleData';
 
 export default function BobAIAdvisor() {
     const { settings } = useUserStore();
     const { assets, isLoading } = useMarketData();
     const { news, error: newsError } = useNews();
+    const { transactions: whaleData } = useWhaleData();
 
     // Simple "AI" logic for mockup
     const getInsight = () => {
@@ -62,6 +64,15 @@ export default function BobAIAdvisor() {
         }
 
         messages.push("Consider watching for entry points on dips.");
+
+        // 4. Whale Watcher Integration
+        if (whaleData && whaleData.length > 0) {
+            const recentMegaWhale = whaleData.find(tx => tx.amount_usd > 10000000); // Alert on > $10M
+            if (recentMegaWhale) {
+                // Blockchain.com API might not show owner, so we simplify the alert
+                messages.unshift(`WHALE ALERT: Massive BTC movement detected on-chain ($${(recentMegaWhale.amount_usd / 1000000).toFixed(1)}M).`);
+            }
+        }
 
         return messages;
     };

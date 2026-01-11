@@ -5,6 +5,7 @@ import AssetScreener from '@/components/AssetScreener';
 import AnalysisEngine from '@/components/AnalysisEngine';
 import BobAIAdvisor from '@/components/BobAIAdvisor';
 import NewsFeed from '@/components/NewsFeed';
+import WhaleTracker from '@/components/WhaleTracker';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { LayoutDashboard, Settings2, Zap } from 'lucide-react';
 
@@ -43,10 +44,13 @@ export default function Home() {
             </div>
           </aside>
 
-          {/* Bottom Area: BobAI Advisor & News */}
-          <section className="col-span-3 h-64 grid grid-cols-3 gap-6">
+          {/* Bottom Area: BobAI Advisor & News & Whale Watcher */}
+          <section className="col-span-3 h-64 grid grid-cols-4 gap-6">
             <div className="col-span-2 rounded-xl border border-border bg-card overflow-hidden h-full">
               <BobAIAdvisor />
+            </div>
+            <div className="col-span-1 rounded-xl border border-border bg-card overflow-hidden h-full">
+              <WhaleTracker />
             </div>
             <div className="col-span-1 rounded-xl border border-border bg-card overflow-hidden h-full">
               <NewsFeed />
@@ -68,8 +72,11 @@ export default function Home() {
           )}
           {mobileTab === 'intel' && (
             <div className="h-full w-full flex flex-col bg-muted/10">
-              <div className="flex-1 overflow-hidden border-b border-border">
+              <div className="h-[35%] overflow-hidden border-b border-border">
                 <BobAIAdvisor />
+              </div>
+              <div className="h-[30%] overflow-hidden border-b border-border">
+                <WhaleTracker />
               </div>
               <div className="flex-1 overflow-hidden">
                 <NewsFeed />

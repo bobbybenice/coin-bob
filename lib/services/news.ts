@@ -1,6 +1,6 @@
 'use server';
 
-import { WATCHLIST, SYMBOL_MAP } from '@/lib/binance';
+import { WATCHLIST, SYMBOL_MAP } from '@/lib/constants';
 import { NewsItem } from '@/lib/types';
 
 interface CryptoPanicPost {
@@ -143,6 +143,7 @@ export async function fetchCryptoNews(): Promise<NewsItem[]> {
 
     } catch (error) {
         console.error("Failed to fetch crypto news:", error);
-        throw new Error(error instanceof Error ? error.message : "Service Unavailable");
+        // Return empty array to prevent UI crash, let the UI handle empty state
+        return [];
     }
 }

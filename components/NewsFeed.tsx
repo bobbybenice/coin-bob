@@ -3,6 +3,8 @@
 import { useNews } from '@/lib/hooks/useNews';
 import { useUserStore } from '@/lib/store';
 
+import { Newspaper } from 'lucide-react';
+
 export default function NewsFeed() {
     const { activeAsset } = useUserStore();
     const { news, isLoading: loading, error, refresh } = useNews();
@@ -58,8 +60,16 @@ export default function NewsFeed() {
                         ))}
                     </div>
                 ) : news.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center h-full text-muted-foreground text-xs font-mono">
-                        No recent news found for tracked assets.
+                    <div className="flex flex-col items-center justify-center h-full p-8 text-center select-none opacity-60 hover:opacity-100 transition-opacity">
+                        <div className="w-12 h-12 rounded-full bg-muted/30 flex items-center justify-center ring-1 ring-border/50 mb-4">
+                            <Newspaper className="w-5 h-5 text-muted-foreground" />
+                        </div>
+                        <div className="max-w-[160px] space-y-1">
+                            <p className="text-xs font-medium text-foreground">No News Found</p>
+                            <p className="text-[10px] text-muted-foreground leading-relaxed">
+                                No recent stories for {activeAsset || 'tracked assets'}.
+                            </p>
+                        </div>
                     </div>
                 ) : (
                     <div className="divide-y divide-border">

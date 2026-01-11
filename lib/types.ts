@@ -64,3 +64,25 @@ export interface NewsItem {
     sentiment: 'bullish' | 'bearish' | 'neutral';
     score: number;
 }
+
+export interface WhaleTransaction {
+    id: string;
+    blockchain: string;
+    symbol: string;
+    transaction_type: string;
+    hash: string;
+    from: {
+        address: string;
+        owner: string;
+        owner_type: string;
+    };
+    to: {
+        address: string;
+        owner: string;
+        owner_type: string;
+    };
+    timestamp: number;
+    amount: number;
+    amount_usd: number;
+    transaction_count: number;
+}
