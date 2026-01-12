@@ -9,7 +9,10 @@ import { Search, X, TrendingUp, Activity, Gauge } from 'lucide-react';
 type SortField = 'price' | 'change24h' | 'rsi' | 'bobScore' | 'symbol';
 type SortDirection = 'asc' | 'desc';
 
+import { useRouter } from 'next/navigation';
+
 export default function AssetScreener() {
+  const router = useRouter();
   const { settings, toggleFavorite, isLoaded, activeAsset, setActiveAsset } = useUserStore();
   const { assets, isLoading, error } = useMarketData();
   const { data: fngData, isLoading: isFngLoading } = useFearAndGreed();
@@ -300,7 +303,7 @@ export default function AssetScreener() {
                 return (
                   <tr
                     key={asset.id}
-                    onClick={() => setActiveAsset(isActive ? null : asset.symbol)}
+                    onClick={() => router.push(`/analyze/${asset.symbol}`)}
                     className={`group transition-colors cursor-pointer ${isActive ? 'bg-emerald-500/10 hover:bg-emerald-500/20' : 'hover:bg-muted/50'}`}
                   >
                     <td className="py-2.5 px-2 lg:px-4">
@@ -434,7 +437,7 @@ export default function AssetScreener() {
                       <button
                         key={asset.id}
                         onClick={() => {
-                          setActiveAsset(asset.symbol);
+                          router.push(`/analyze/${asset.symbol}`);
                           setIsSearchOpen(false);
                         }}
                         className="w-full flex items-center justify-between p-2.5 rounded-lg hover:bg-muted/50 group transition-colors text-left"

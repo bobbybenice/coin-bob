@@ -5,7 +5,7 @@ import { useMarketData } from '@/lib/hooks/useMarketData';
 import { useNews } from '@/lib/hooks/useNews';
 import { useWhaleData } from '@/lib/hooks/useWhaleData';
 
-export default function BobAIAdvisor() {
+export default function BobAIAdvisor({ contextOverride }: { contextOverride?: string }) {
     const { settings } = useUserStore();
     const { assets, isLoading } = useMarketData();
     const { news, error: newsError } = useNews();
@@ -13,6 +13,11 @@ export default function BobAIAdvisor() {
 
     // Simple "AI" logic for mockup
     const getInsight = () => {
+        if (contextOverride) {
+            // Split override by newlines or formatting if needed, but for now just return it as a message or split it
+            return contextOverride.trim().split('\n').filter(line => line.trim().length > 0);
+        }
+
         if (isLoading) return [`Analyzing ${settings.timeframe} market data...`];
 
         if (settings.filters.favoritesOnly && settings.favorites.length === 0) {
