@@ -1,7 +1,8 @@
 "use client";
 
 import React, { createContext, useContext, useState, ReactNode } from "react";
-import { ICTSignal } from "@/lib/types";
+// import { ICTSignal } from "@/lib/types"; 
+// Removed unused import
 
 export interface AnalysisState {
     id: string;

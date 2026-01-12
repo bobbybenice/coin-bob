@@ -1,7 +1,7 @@
 'use client';
 
 import { useWhaleData } from '@/lib/hooks/useWhaleData';
-import { ArrowRight, Waves } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 
 export default function WhaleTracker() {
     const { transactions, isLoading, error } = useWhaleData();

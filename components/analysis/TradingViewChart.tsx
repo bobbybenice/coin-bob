@@ -13,7 +13,7 @@ interface TradingViewChartProps {
 declare global {
     interface Window {
         TradingView: {
-            widget: new (config: any) => any;
+            widget: new (config: unknown) => unknown;
         };
     }
 }

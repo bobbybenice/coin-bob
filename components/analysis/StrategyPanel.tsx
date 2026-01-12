@@ -2,7 +2,7 @@
 
 import React from "react";
 import { useStrategy } from "./StrategyProvider";
-import { ArrowRight, Activity, Zap } from "lucide-react";
+import { Activity, Zap } from "lucide-react";
 
 // Inline functional components for UI replacement
 const Badge = ({ children, variant, className }: { children: React.ReactNode, variant?: string, className?: string }) => (

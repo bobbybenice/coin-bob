@@ -13,7 +13,7 @@ import { useRouter } from 'next/navigation';
 
 export default function AssetScreener() {
   const router = useRouter();
-  const { settings, toggleFavorite, isLoaded, activeAsset, setActiveAsset } = useUserStore();
+  const { settings, toggleFavorite, isLoaded, activeAsset } = useUserStore();
   const { assets, isLoading, error } = useMarketData();
   const { data: fngData, isLoading: isFngLoading } = useFearAndGreed();
   const [sortField, setSortField] = useState<SortField>('bobScore');

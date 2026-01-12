@@ -9,7 +9,7 @@ import { ArrowLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { fetchHistoricalData } from "@/lib/services/market";
 import { analyzeICT } from "@/lib/services/ict-engine";
-import { ICTSignal } from "@/lib/types";
+import { AnalysisState } from "@/components/analysis/StrategyProvider";
 
 // Wrapper to provide text context to BobAI based on strategy
 function AnalysisAdvisor({ symbol }: { symbol: string }) {
@@ -102,7 +102,7 @@ function AnalysisPageContent({ params }: { params: Promise<{ symbol: string }> }
                 if (history && history.length > 50) {
                     const signalAnalysis = analyzeICT(history);
 
-                    const stateObj = {
+                    const stateObj: AnalysisState = {
                         id: `${symbol}-${Date.now()}`,
                         symbol: symbol,
                         timestamp: Date.now(),
@@ -115,7 +115,7 @@ function AnalysisPageContent({ params }: { params: Promise<{ symbol: string }> }
                         killzoneLabel: signalAnalysis.killzone
                     };
 
-                    setICTState(stateObj as any);
+                    setICTState(stateObj);
                 }
             } catch (e) {
                 console.error(e);
@@ -125,7 +125,7 @@ function AnalysisPageContent({ params }: { params: Promise<{ symbol: string }> }
         fetchAnalysis();
         const interval = setInterval(fetchAnalysis, 60000);
         return () => clearInterval(interval);
-    }, [pairSymbol, anchorTf, setICTState]); // Re-run when Anchor TF changes
+    }, [pairSymbol, anchorTf, setICTState, symbol]); // Re-run when Anchor TF changes
 
     return (
         <div className="flex flex-col h-screen overflow-hidden bg-background text-foreground">
