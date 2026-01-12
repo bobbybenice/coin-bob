@@ -97,7 +97,7 @@ export default function AssetScreener() {
 
   // Main Table Filter (No longer depends on searchQuery)
   const filteredAssets = useMemo(() => {
-    if (!isLoaded || isLoading) return [];
+    if (!isLoaded) return [];
 
     return assets.filter(asset => {
       // 0. Sync Main List with Search
@@ -147,7 +147,7 @@ export default function AssetScreener() {
         ? (aValue as number) - (bValue as number)
         : (bValue as number) - (aValue as number);
     });
-  }, [settings, sortField, sortDir, isLoaded, assets, isLoading, searchQuery]);
+  }, [settings, sortField, sortDir, isLoaded, assets, searchQuery]); // Removed isLoading from deps
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -217,12 +217,15 @@ export default function AssetScreener() {
 
             <div className="flex items-center gap-3 text-xs font-mono">
               {isLoading ? (
-                <span className="text-emerald-500 flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping"></span>
-                  LIVE FEED
+                <span className="text-amber-500 flex items-center gap-1.5 animate-pulse">
+                  <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                  RECALCULATING ({settings.timeframe})
                 </span>
               ) : (
-                <span className="text-muted-foreground">FEED ACTIVE</span>
+                <span className="text-emerald-500 flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping"></span>
+                  LIVE FEED ({settings.timeframe})
+                </span>
               )}
               <span className="w-px h-3 bg-white/10"></span>
               <span className="text-muted-foreground">{filteredAssets.length} ASSETS</span>
@@ -275,6 +278,9 @@ export default function AssetScreener() {
                   Score <SortIcon field="bobScore" />
                 </th>
                 <th className="py-3 px-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider text-center">
+                  Signal
+                </th>
+                <th className="py-3 px-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider text-center">
                   Act
                 </th>
               </tr>
@@ -286,6 +292,10 @@ export default function AssetScreener() {
                 const isMacd = asset.macd && asset.macd.histogram && asset.macd.histogram > 0;
                 // const isBbLow = asset.bb && asset.price < asset.bb.lower;
                 const isActive = activeAsset === asset.symbol;
+
+                const signal = asset.ictAnalysis?.signal;
+                const killzone = asset.ictAnalysis?.killzone;
+                const isHighProb = asset.ictAnalysis?.isHighProbability;
 
                 return (
                   <tr
@@ -338,6 +348,20 @@ export default function AssetScreener() {
                       </div>
                     </td>
                     <td className="py-2.5 px-4 text-center">
+                      {signal && signal !== 'NONE' ? (
+                        <div className={`inline-flex flex-col items-center justify-center px-1.5 py-0.5 rounded text-[10px] font-bold border ${isHighProb ? 'animate-pulse ring-1 ring-offset-1 ring-offset-background' : ''
+                          } ${signal.includes('BULLISH')
+                            ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 ring-emerald-500/50'
+                            : 'bg-rose-500/10 text-rose-400 border-rose-500/20 ring-rose-500/50'
+                          }`}>
+                          <span>{signal === 'BULLISH_SWEEP' ? 'SWEEP' : signal === 'BULLISH_FVG' ? 'FVG' : signal === 'BEARISH_SWEEP' ? 'SWEEP' : 'FVG'}</span>
+                          {killzone && <span className="text-[8px] opacity-70 leading-none mt-0.5">{killzone}</span>}
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground/30 text-[10px]">-</span>
+                      )}
+                    </td>
+                    <td className="py-2.5 px-4 text-center">
                       <button
                         onClick={(e) => { e.stopPropagation(); toggleFavorite(asset.id); }}
                         className={`p-1.5 rounded-md transition-all ${settings.favorites.includes(asset.id)
@@ -356,9 +380,18 @@ export default function AssetScreener() {
                 <tr>
                   <td colSpan={6} className="py-20 text-center text-muted-foreground">
                     <div className="flex flex-col items-center gap-2">
-                      <span className="text-2xl opacity-20">∅</span>
-                      <p className="text-sm font-medium">No assets match your criteria</p>
-                      <p className="text-xs text-muted-foreground">Try adjusting the filters in the Analysis Engine</p>
+                      {isLoading ? (
+                        <>
+                          <div className="w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+                          <p className="text-sm font-medium animate-pulse">Syncing {settings.timeframe} data...</p>
+                        </>
+                      ) : (
+                        <>
+                          <span className="text-2xl opacity-20">∅</span>
+                          <p className="text-sm font-medium">No assets match your criteria</p>
+                          <p className="text-xs text-muted-foreground">Try adjusting the filters in the Analysis Engine</p>
+                        </>
+                      )}
                     </div>
                   </td>
                 </tr>

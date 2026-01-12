@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
-import { UserSettings, FilterCriteria } from './types';
+import { UserSettings, FilterCriteria, Timeframe } from './types';
 
 const STORAGE_KEY = 'coinbob_user_settings';
 
@@ -18,6 +18,7 @@ const DEFAULT_SETTINGS: UserSettings = {
         macdBullish: false,
         bbLow: false,
     },
+    timeframe: '1d',
 };
 
 interface UserContextType {
@@ -27,6 +28,7 @@ interface UserContextType {
     updateFilters: (newFilters: Partial<FilterCriteria>) => void;
     activeAsset: string | null;
     setActiveAsset: (symbol: string | null) => void;
+    setTimeframe: (timeframe: Timeframe) => void;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -63,6 +65,10 @@ export function UserProvider({ children }: { children: ReactNode }) {
         }
     }, [settings, isLoaded]);
 
+    const setTimeframe = (timeframe: Timeframe) => {
+        setSettings((prev) => ({ ...prev, timeframe }));
+    };
+
     const toggleFavorite = (assetId: string) => {
         setSettings((prev) => {
             const isFav = prev.favorites.includes(assetId);
@@ -83,7 +89,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     };
 
     return (
-        <UserContext.Provider value={{ settings, isLoaded, toggleFavorite, updateFilters, activeAsset, setActiveAsset }}>
+        <UserContext.Provider value={{ settings, isLoaded, toggleFavorite, updateFilters, activeAsset, setActiveAsset, setTimeframe }}>
             {children}
         </UserContext.Provider>
     );

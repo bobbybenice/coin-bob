@@ -13,13 +13,14 @@ export default function BobAIAdvisor() {
 
     // Simple "AI" logic for mockup
     const getInsight = () => {
-        if (isLoading) return ["Analyzing real-time market data..."];
+        if (isLoading) return [`Analyzing ${settings.timeframe} market data...`];
 
         if (settings.filters.favoritesOnly && settings.favorites.length === 0) {
             return ["It looks like you haven't selected any favorites yet. Mark assets with the star icon to track them here."];
         }
 
         const messages: string[] = [];
+        messages.push(`Analyzing market on the [${settings.timeframe}] chart...`);
 
         const highRsi = assets.filter(a => a.rsi > 70).map(a => a.symbol).slice(0, 5);
         const highPotential = assets.filter(a => a.bobScore > 80).map(a => a.symbol).slice(0, 5);
@@ -72,6 +73,24 @@ export default function BobAIAdvisor() {
                 // Blockchain.com API might not show owner, so we simplify the alert
                 messages.unshift(`WHALE ALERT: Massive BTC movement detected on-chain ($${(recentMegaWhale.amount_usd / 1000000).toFixed(1)}M).`);
             }
+        }
+
+        // 5. ICT High Probability Alerts
+        const ictSetups = assets.filter(a => a.ictAnalysis?.isHighProbability);
+        if (ictSetups.length > 0) {
+            ictSetups.forEach(a => {
+                const signal = a.ictAnalysis?.signal;
+                const killzone = a.ictAnalysis?.killzone;
+                const killzoneName = killzone === 'LONDON' ? 'London' : 'New York';
+
+                let action = "monitoring";
+                if (signal?.includes('SWEEP')) action = `Swept Liquidity`;
+                if (signal?.includes('FVG')) action = `formed a Fair Value Gap`;
+
+                const type = signal?.includes('BULLISH') ? 'LONG' : 'SHORT';
+
+                messages.unshift(`ICT ALERT [${type}]: ${a.symbol} during ${killzoneName} Killzone. Price ${action}. High Probability Setup.`);
+            });
         }
 
         return messages;

@@ -1,6 +1,7 @@
 'use client';
 
 import { useUserStore } from '@/lib/store';
+import TimeframeSelector from '@/components/TimeframeSelector';
 
 export default function AnalysisEngine() {
     const { settings, updateFilters, isLoaded } = useUserStore();
@@ -11,11 +12,14 @@ export default function AnalysisEngine() {
 
     return (
         <div className="flex flex-col h-auto lg:h-full bg-transparent overflow-hidden">
-            <div className="p-4 border-b border-border bg-card flex justify-between items-center shrink-0 backdrop-blur-sm">
-                <h2 className="text-sm font-medium text-foreground tracking-tight flex items-center gap-2 uppercase">
-                    <span className="w-1.5 h-1.5 rounded-sm bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.5)]" />
-                    Analysis Engine
-                </h2>
+            <div className="p-4 border-b border-border bg-card flex flex-col gap-4 shrink-0 backdrop-blur-sm">
+                <div className="flex justify-between items-center">
+                    <h2 className="text-sm font-medium text-foreground tracking-tight flex items-center gap-2 uppercase">
+                        <span className="w-1.5 h-1.5 rounded-sm bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.5)]" />
+                        Analysis Engine
+                    </h2>
+                </div>
+                <TimeframeSelector />
             </div>
 
             <div className="flex-1 p-5 space-y-8 overflow-y-auto custom-scrollbar">

@@ -1,3 +1,25 @@
+export interface Candle {
+    time: number;
+    open: number;
+    high: number;
+    low: number;
+    close: number;
+    volume: number;
+}
+
+export type ICTSignal = 'BULLISH_SWEEP' | 'BEARISH_SWEEP' | 'BULLISH_FVG' | 'BEARISH_FVG' | 'NONE';
+
+export interface ICTAnalysis {
+    signal: ICTSignal;
+    fvg?: {
+        top: number;
+        bottom: number;
+        type: 'BULLISH' | 'BEARISH';
+    };
+    killzone?: 'LONDON' | 'NEW_YORK';
+    isHighProbability: boolean;
+}
+
 export interface Asset {
     id: string;
     symbol: string;
@@ -22,6 +44,7 @@ export interface Asset {
         middle: number;
         lower: number;
     };
+    ictAnalysis?: ICTAnalysis;
 }
 
 export interface FilterCriteria {
@@ -41,6 +64,7 @@ export interface FilterCriteria {
 export interface UserSettings {
     favorites: string[];
     filters: FilterCriteria;
+    timeframe: Timeframe;
 }
 
 export interface NewsItem {
@@ -86,3 +110,5 @@ export interface WhaleTransaction {
     amount_usd: number;
     transaction_count: number;
 }
+
+export type Timeframe = '1m' | '5m' | '1h' | '4h' | '1d';
