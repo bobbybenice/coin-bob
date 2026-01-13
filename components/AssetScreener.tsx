@@ -328,11 +328,11 @@ export default function AssetScreener() {
                 <th className="py-3 px-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider text-center">
                   Trend (4H/1H/15m)
                 </th>
-                <th
-                  className="py-3 px-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider text-right cursor-pointer hover:text-zinc-300 transition-colors select-none"
-                  onClick={() => handleSort('rsi')}
-                >
-                  RSI <SortIcon field="rsi" />
+                <th className="py-3 px-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider text-center">
+                  RSI (4H/1H/15m)
+                </th>
+                <th className="py-3 px-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider text-center">
+                  MFI (4H/1H/15m)
                 </th>
                 <th className="py-3 px-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider text-center">
                   Strategy Matrix
@@ -400,13 +400,55 @@ export default function AssetScreener() {
                         <div className={`w-3 h-3 rounded-sm ${trends[asset.symbol]?.t15m === 'UP' ? 'bg-emerald-500' : trends[asset.symbol]?.t15m === 'DOWN' ? 'bg-rose-500' : 'bg-zinc-800'}`} title="15m Trend" />
                       </div>
                     </td>
-                    <td className="py-2.5 px-4 text-right">
-                      <span className={`inline-flex px-1.5 py-0.5 rounded text-[10px] font-mono font-bold min-w-[32px] justify-center ${asset.rsi < 30 ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
-                        asset.rsi > 70 ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20' :
-                          'text-muted-foreground bg-muted/40'
-                        }`}>
-                        {asset.rsi.toFixed(0)}
-                      </span>
+                    <td className="py-2.5 px-4 text-center">
+                      <div className="flex items-center justify-center gap-1">
+                        {/* 4H */}
+                        <div className={`w-6 h-5 rounded flex items-center justify-center text-[9px] font-mono font-bold ${(trends[asset.symbol]?.rsi4h ?? 50) < 30 ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' :
+                          (trends[asset.symbol]?.rsi4h ?? 50) > 70 ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30' :
+                            'bg-zinc-800/50 text-zinc-500 border border-zinc-700/50'}`}
+                          title="4H RSI">
+                          {trends[asset.symbol]?.rsi4h?.toFixed(0) ?? '-'}
+                        </div>
+                        {/* 1H */}
+                        <div className={`w-6 h-5 rounded flex items-center justify-center text-[9px] font-mono font-bold ${(trends[asset.symbol]?.rsi1h ?? 50) < 30 ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' :
+                          (trends[asset.symbol]?.rsi1h ?? 50) > 70 ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30' :
+                            'bg-zinc-800/50 text-zinc-500 border border-zinc-700/50'}`}
+                          title="1H RSI">
+                          {trends[asset.symbol]?.rsi1h?.toFixed(0) ?? '-'}
+                        </div>
+                        {/* 15m */}
+                        <div className={`w-6 h-5 rounded flex items-center justify-center text-[9px] font-mono font-bold ${(trends[asset.symbol]?.rsi15m ?? 50) < 30 ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' :
+                          (trends[asset.symbol]?.rsi15m ?? 50) > 70 ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30' :
+                            'bg-zinc-800/50 text-zinc-500 border border-zinc-700/50'}`}
+                          title="15m RSI">
+                          {trends[asset.symbol]?.rsi15m?.toFixed(0) ?? '-'}
+                        </div>
+                      </div>
+                    </td>
+                    <td className="py-2.5 px-4 text-center">
+                      <div className="flex items-center justify-center gap-1">
+                        {/* 4H */}
+                        <div className={`w-6 h-5 rounded flex items-center justify-center text-[9px] font-mono font-bold ${(trends[asset.symbol]?.mfi4h ?? 50) < 20 ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' :
+                          (trends[asset.symbol]?.mfi4h ?? 50) > 80 ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30' :
+                            'bg-zinc-800/50 text-zinc-500 border border-zinc-700/50'}`}
+                          title="4H MFI">
+                          {trends[asset.symbol]?.mfi4h?.toFixed(0) ?? '-'}
+                        </div>
+                        {/* 1H */}
+                        <div className={`w-6 h-5 rounded flex items-center justify-center text-[9px] font-mono font-bold ${(trends[asset.symbol]?.mfi1h ?? 50) < 20 ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' :
+                          (trends[asset.symbol]?.mfi1h ?? 50) > 80 ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30' :
+                            'bg-zinc-800/50 text-zinc-500 border border-zinc-700/50'}`}
+                          title="1H MFI">
+                          {trends[asset.symbol]?.mfi1h?.toFixed(0) ?? '-'}
+                        </div>
+                        {/* 15m */}
+                        <div className={`w-6 h-5 rounded flex items-center justify-center text-[9px] font-mono font-bold ${(trends[asset.symbol]?.mfi15m ?? 50) < 20 ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' :
+                          (trends[asset.symbol]?.mfi15m ?? 50) > 80 ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30' :
+                            'bg-zinc-800/50 text-zinc-500 border border-zinc-700/50'}`}
+                          title="15m MFI">
+                          {trends[asset.symbol]?.mfi15m?.toFixed(0) ?? '-'}
+                        </div>
+                      </div>
                     </td>
                     <td className="py-2.5 px-4 text-center">
                       <div className="flex items-center justify-center gap-2">
@@ -468,7 +510,7 @@ export default function AssetScreener() {
 
               {filteredAssets.length === 0 && (
                 <tr>
-                  <td colSpan={9} className="py-20 text-center text-muted-foreground">
+                  <td colSpan={10} className="py-20 text-center text-muted-foreground">
                     <div className="flex flex-col items-center gap-2">
                       {isLoading ? (
                         <>

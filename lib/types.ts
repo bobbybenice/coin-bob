@@ -124,5 +124,11 @@ export interface AssetTrends {
     t15m?: TrendDirection;
     t1h?: TrendDirection;
     t4h?: TrendDirection;
+    rsi15m?: number;
+    rsi1h?: number;
+    rsi4h?: number;
+    mfi15m?: number;
+    mfi1h?: number;
+    mfi4h?: number;
     lastUpdated?: number;
 }

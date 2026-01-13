@@ -4,7 +4,7 @@ import { useEffect, useRef } from 'react';
 import { Asset, TrendDirection } from '../types';
 import { useUserStore } from '../store';
 import { fetchHistoricalData } from '../services/market';
-import { EMA } from 'technicalindicators';
+import { EMA, RSI, MFI } from 'technicalindicators';
 
 // Helper to calculate trend
 function getTrend(closes: number[]): TrendDirection {
@@ -16,6 +16,24 @@ function getTrend(closes: number[]): TrendDirection {
 
     // Simple logic: Price > EMA50 = UP
     return lastClose > lastEma ? 'UP' : 'DOWN';
+}
+
+function getRSI(closes: number[]): number {
+    if (closes.length < 14) return 50;
+    const rsi = RSI.calculate({ values: closes, period: 14 });
+    return rsi[rsi.length - 1] || 50;
+}
+
+function getMFI(high: number[], low: number[], close: number[], volume: number[]): number {
+    if (close.length < 14) return 50;
+    const mfi = MFI.calculate({
+        high,
+        low,
+        close,
+        volume,
+        period: 14
+    });
+    return mfi[mfi.length - 1] || 50;
 }
 
 export function useTrendScanner(assets: Asset[]) {
@@ -32,37 +50,47 @@ export function useTrendScanner(assets: Asset[]) {
 
             try {
                 // Round robin selection
+                if (assets.length === 0) return;
                 const idx = indexRef.current % assets.length;
                 const asset = assets[idx];
                 indexRef.current = (indexRef.current + 1) % assets.length;
 
-                // Check cache validity (1 hour)
+                // Check cache validity (60 mins)
                 const cached = trends[asset.symbol];
                 const now = Date.now();
                 if (cached && cached.lastUpdated && (now - cached.lastUpdated < 3600000)) {
-                    // Valid cache, skip fetch logic but continue loop
                     processingRef.current = false;
                     return;
                 }
 
-                // Fetch 4H (Most important for God Mode)
-                // We normalize symbols? Asset symbol is usually like 'BTC' or 'BTCUSDT'
-                // Our fetch service expects 'BTCUSDT'
+                // Fetch concurrent
                 const symbol = asset.symbol.toUpperCase().endsWith('USDT') ? asset.symbol : `${asset.symbol}USDT`;
 
-                // Fetch 4h
-                const h4 = await fetchHistoricalData(symbol, '4h');
-                // Fetch 1h
-                const h1 = await fetchHistoricalData(symbol, '1h');
-                // Fetch 15m
-                const m15 = await fetchHistoricalData(symbol, '15m');
+                const [h4, h1, m15] = await Promise.all([
+                    fetchHistoricalData(symbol, '4h'),
+                    fetchHistoricalData(symbol, '1h'),
+                    fetchHistoricalData(symbol, '15m')
+                ]);
 
-                if (h4 && h1 && m15) {
-                    const t4h = getTrend(h4.map(c => c.close));
-                    const t1h = getTrend(h1.map(c => c.close));
-                    const t15m = getTrend(m15.map(c => c.close));
+                // Ensure we have enough data (at least 30 candles)
+                if (h4.length > 30 && h1.length > 30 && m15.length > 30) {
+                    const c4h = h4.map(c => c.close);
+                    const c1h = h1.map(c => c.close);
+                    const c15m = m15.map(c => c.close);
 
-                    updateAssetTrend(asset.symbol, { t4h, t1h, t15m });
+                    const t4h = getTrend(c4h);
+                    const t1h = getTrend(c1h);
+                    const t15m = getTrend(c15m);
+
+                    const rsi4h = getRSI(c4h);
+                    const rsi1h = getRSI(c1h);
+                    const rsi15m = getRSI(c15m);
+
+                    const mfi4h = getMFI(h4.map(c => c.high), h4.map(c => c.low), c4h, h4.map(c => c.volume));
+                    const mfi1h = getMFI(h1.map(c => c.high), h1.map(c => c.low), c1h, h1.map(c => c.volume));
+                    const mfi15m = getMFI(m15.map(c => c.high), m15.map(c => c.low), c15m, m15.map(c => c.volume));
+
+                    updateAssetTrend(asset.symbol, { t4h, t1h, t15m, rsi4h, rsi1h, rsi15m, mfi4h, mfi1h, mfi15m });
                 }
 
             } catch (e) {
@@ -72,7 +100,7 @@ export function useTrendScanner(assets: Asset[]) {
             }
         };
 
-        const interval = setInterval(processNextAsset, 1000); // 1 asset per second
+        const interval = setInterval(processNextAsset, 250); // 4 assets/sec
         return () => clearInterval(interval);
     }, [assets, trends, updateAssetTrend]);
 }
