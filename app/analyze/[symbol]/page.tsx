@@ -12,7 +12,12 @@ import { useRouter } from "next/navigation";
 import { fetchHistoricalData } from "@/lib/services/market";
 import { strategyRSIMFI } from "@/lib/engine/strategies/rsi-mfi-confluence";
 import { strategyICT } from "@/lib/engine/strategies/ict";
+import { Candle } from "@/lib/types";
 import { Play, Settings2 } from "lucide-react";
+import dynamic from 'next/dynamic';
+import { scanSignals, Signal } from '@/lib/engine/signal-scanner';
+
+const SignalChart = dynamic(() => import('@/components/analysis/SignalChart'), { ssr: false });
 
 // Wrapper to provide text context to BobAI based on strategy
 function AnalysisAdvisor({ symbol }: { symbol: string }) {
@@ -91,6 +96,9 @@ function AnalysisPageContent({ params }: { params: Promise<{ symbol: string }> }
     // State for Timeframes (Default: Anchor=1h, Execution=1m)
     const [anchorTf, setAnchorTf] = useState("60");
     const [execTf, setExecTf] = useState("1");
+    const [viewMode, setViewMode] = useState<'TV' | 'STRATEGY'>('TV');
+    const [strategyHistory, setStrategyHistory] = useState<Candle[]>([]);
+    const [strategySignals, setStrategySignals] = useState<Signal[]>([]);
 
     // Sync Anchor TF with Global Settings
     useEffect(() => {
@@ -160,6 +168,13 @@ function AnalysisPageContent({ params }: { params: Promise<{ symbol: string }> }
                     }
 
                     setAnalysisState(stateObj);
+
+                    if (viewMode === 'STRATEGY') {
+                        const strategyFn = strategyName === 'RSI_MFI' ? strategyRSIMFI : strategyICT;
+                        const signals = scanSignals(strategyFn, history);
+                        setStrategyHistory(history);
+                        setStrategySignals(signals);
+                    }
                 }
             } catch (e) {
                 console.error(e);
@@ -169,7 +184,7 @@ function AnalysisPageContent({ params }: { params: Promise<{ symbol: string }> }
         fetchAnalysis();
         const interval = setInterval(fetchAnalysis, 60000);
         return () => clearInterval(interval);
-    }, [pairSymbol, anchorTf, setAnalysisState, symbol, strategyName]);
+    }, [pairSymbol, anchorTf, setAnalysisState, symbol, strategyName, viewMode]);
 
     return (
         <div className="flex flex-col h-screen overflow-hidden bg-background text-foreground">
@@ -228,7 +243,23 @@ function AnalysisPageContent({ params }: { params: Promise<{ symbol: string }> }
                         {/* Anchor Chart (Left/Top) */}
                         <div className="flex-1 border-r border-border flex flex-col min-h-[300px]">
                             <div className="flex items-center justify-between px-2 py-1 bg-background/50 border-b border-border text-xs font-mono text-muted-foreground">
-                                <span>ANCHOR CHART</span>
+                                <span className="flex items-center gap-2">
+                                    ANCHOR CHART
+                                    <div className="flex bg-muted rounded p-0.5 scale-90 origin-left">
+                                        <button
+                                            onClick={() => setViewMode('TV')}
+                                            className={`px-2 py-0.5 rounded text-[9px] font-bold transition-all ${viewMode === 'TV' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+                                        >
+                                            TV
+                                        </button>
+                                        <button
+                                            onClick={() => setViewMode('STRATEGY')}
+                                            className={`px-2 py-0.5 rounded text-[9px] font-bold transition-all ${viewMode === 'STRATEGY' ? 'bg-background text-emerald-500 shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+                                        >
+                                            STRATEGY
+                                        </button>
+                                    </div>
+                                </span>
                                 <TimeframeSelector
                                     value={anchorTf}
                                     onChange={setAnchorTf}
@@ -236,11 +267,20 @@ function AnalysisPageContent({ params }: { params: Promise<{ symbol: string }> }
                                 />
                             </div>
                             <div className="flex-1 relative">
-                                <TradingViewChart
-                                    symbol={pairSymbol}
-                                    interval={anchorTf}
-                                    containerId={`tv-anchor-${symbol}`}
-                                />
+                                {viewMode === 'TV' ? (
+                                    <TradingViewChart
+                                        symbol={pairSymbol}
+                                        interval={anchorTf}
+                                        containerId={`tv-anchor-${symbol}`}
+                                    />
+                                ) : (
+                                    <div className="w-full h-full absolute inset-0 bg-background">
+                                        <SignalChart data={strategyHistory} signals={strategySignals} />
+                                        <div className="absolute top-2 right-2 bg-background/80 backdrop-blur px-2 py-1 rounded text-[10px] text-muted-foreground border border-border">
+                                            Found {strategySignals.length} potential setups in view
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         </div>
 

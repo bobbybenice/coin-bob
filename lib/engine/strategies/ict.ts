@@ -106,7 +106,8 @@ export function strategyICT(candles: Candle[]): StrategyResponse {
             killzone,
             isHighProbability: !!killzone, // Simplified high prob check
             sweep: sweepSignal,
-            fvg: fvgSignal
+            fvg: fvgSignal,
+            side: (sweepSignal === 'BULLISH' || (!sweepSignal && fvgSignal === 'BULLISH')) ? 'LONG' : 'SHORT'
         }
     };
 }
