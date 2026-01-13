@@ -4,18 +4,50 @@ import { useState, useMemo, useEffect, useRef } from 'react';
 import { useMarketData } from '@/lib/hooks/useMarketData';
 import { useFearAndGreed } from '@/lib/hooks/useFearAndGreed';
 import { useUserStore } from '@/lib/store';
-import { Search, X, TrendingUp, Activity, Gauge, Play } from 'lucide-react';
+import { useAlerts } from '@/lib/hooks/useAlerts';
+import { Search, X, TrendingUp, Activity, Gauge, Play, Bell } from 'lucide-react';
 
 type SortField = 'price' | 'change24h' | 'rsi' | 'bobScore' | 'symbol' | 'volume24h';
 type SortDirection = 'asc' | 'desc';
 
 import { useRouter } from 'next/navigation';
+import { useTrendScanner } from '@/lib/hooks/useTrendScanner';
 
 export default function AssetScreener() {
   const router = useRouter();
-  const { settings, toggleFavorite, isLoaded, activeAsset } = useUserStore();
+  const { settings, toggleFavorite, isLoaded, activeAsset, trends } = useUserStore();
   const { assets, isLoading, error } = useMarketData();
   const { data: fngData, isLoading: isFngLoading } = useFearAndGreed();
+
+  // Alerts
+  const { requestPermission, triggerAlert, permission } = useAlerts();
+  const [alertsEnabled, setAlertsEnabled] = useState(false);
+
+  // Start Background Scanner
+  useTrendScanner(assets);
+
+  // Monitor for God Mode Signals
+  useEffect(() => {
+    if (!alertsEnabled) return;
+
+    assets.forEach(asset => {
+      const signal = asset.ictAnalysis?.signal;
+      if (signal && signal !== 'NONE') {
+        const trend = trends[asset.symbol];
+        if (trend) {
+          const isBullish = signal.includes('BULLISH');
+          const isBearish = signal.includes('BEARISH');
+          // Alert if 4H trend aligns with signal (High Probability)
+          const aligned = (isBullish && trend.t4h === 'UP') || (isBearish && trend.t4h === 'DOWN');
+
+          if (aligned) {
+            triggerAlert(asset, signal);
+          }
+        }
+      }
+    });
+  }, [assets, alertsEnabled, trends, triggerAlert]);
+
   const [sortField, setSortField] = useState<SortField>('bobScore');
   const [sortDir, setSortDir] = useState<SortDirection>('desc');
 
@@ -185,6 +217,18 @@ export default function AssetScreener() {
         <div className="flex items-center gap-6">
           <div className="flex items-center gap-4">
             <button
+              onClick={() => {
+                if (permission !== 'granted') requestPermission();
+                setAlertsEnabled(!alertsEnabled);
+              }}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-md transition-all border border-transparent ${alertsEnabled ? 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20' : 'text-muted-foreground hover:bg-muted'}`}
+              title={permission !== 'granted' ? "Enable Notifications" : "Toggle Smart Alerts"}
+            >
+              <Bell className={`w-3.5 h-3.5 ${alertsEnabled ? 'fill-current animate-pulse' : ''}`} />
+              <span className="text-xs font-medium hidden lg:inline">{alertsEnabled ? 'ON' : 'ALERTS'}</span>
+            </button>
+
+            <button
               onClick={() => { setIsSearchOpen(true); }}
               className={`flex items-center gap-2 px-3 py-1.5 rounded-md bg-muted/50 hover:bg-muted transition-all border border-transparent hover:border-border group ${searchQuery ? 'text-foreground font-medium ring-1 ring-emerald-500/20 bg-emerald-500/5' : 'text-muted-foreground hover:text-foreground'}`}
             >
@@ -281,6 +325,9 @@ export default function AssetScreener() {
                 >
                   Vol (24h) <SortIcon field="volume24h" />
                 </th>
+                <th className="py-3 px-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider text-center">
+                  Trend (4H/1H/15m)
+                </th>
                 <th
                   className="py-3 px-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider text-right cursor-pointer hover:text-zinc-300 transition-colors select-none"
                   onClick={() => handleSort('rsi')}
@@ -342,6 +389,16 @@ export default function AssetScreener() {
                     <td className="py-2.5 px-4 text-right font-mono text-sm text-muted-foreground">
                       <span className="text-foreground font-medium">{(asset.volume24h / 1000000).toFixed(1)}</span>
                       <span className="text-zinc-600 text-[10px] ml-0.5">M</span>
+                    </td>
+                    <td className="py-2.5 px-4 text-center">
+                      <div className="flex items-center justify-center gap-1">
+                        {/* 4H */}
+                        <div className={`w-3 h-3 rounded-sm ${trends[asset.symbol]?.t4h === 'UP' ? 'bg-emerald-500' : trends[asset.symbol]?.t4h === 'DOWN' ? 'bg-rose-500' : 'bg-zinc-800'}`} title="4H Trend" />
+                        {/* 1H */}
+                        <div className={`w-3 h-3 rounded-sm ${trends[asset.symbol]?.t1h === 'UP' ? 'bg-emerald-500' : trends[asset.symbol]?.t1h === 'DOWN' ? 'bg-rose-500' : 'bg-zinc-800'}`} title="1H Trend" />
+                        {/* 15m */}
+                        <div className={`w-3 h-3 rounded-sm ${trends[asset.symbol]?.t15m === 'UP' ? 'bg-emerald-500' : trends[asset.symbol]?.t15m === 'DOWN' ? 'bg-rose-500' : 'bg-zinc-800'}`} title="15m Trend" />
+                      </div>
                     </td>
                     <td className="py-2.5 px-4 text-right">
                       <span className={`inline-flex px-1.5 py-0.5 rounded text-[10px] font-mono font-bold min-w-[32px] justify-center ${asset.rsi < 30 ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
@@ -411,7 +468,7 @@ export default function AssetScreener() {
 
               {filteredAssets.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="py-20 text-center text-muted-foreground">
+                  <td colSpan={9} className="py-20 text-center text-muted-foreground">
                     <div className="flex flex-col items-center gap-2">
                       {isLoading ? (
                         <>

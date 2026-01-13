@@ -71,6 +71,90 @@ export default function SignalChart({ data, signals }: SignalChartProps) {
 
         createSeriesMarkers(candlestickSeries, markers);
 
+        // Risk/Reward Overlay for the latest signal
+        if (signals.length > 0) {
+            const latestSignal = signals[signals.length - 1];
+            const entryPrice = latestSignal.price;
+
+            // Heuristic for SL: Recent Swing Low/High (lookback 10 candles)
+            const idx = data.findIndex(d => d.time === latestSignal.time);
+            let stopLoss = 0;
+
+            if (latestSignal.type === 'LONG') {
+                // Find lowest low in last 10 candles relative to signal
+                const lookback = data.slice(Math.max(0, idx - 10), idx + 1);
+                const lowestLow = Math.min(...lookback.map(c => c.low));
+                stopLoss = lowestLow;
+
+                // Ensure SL is at least 0.5% away to avoid tight chop
+                if (stopLoss > entryPrice * 0.995) stopLoss = entryPrice * 0.995;
+
+                const risk = entryPrice - stopLoss;
+                const takeProfit = entryPrice + (risk * 2); // 2R
+
+                candlestickSeries.createPriceLine({
+                    price: stopLoss,
+                    color: '#ef4444',
+                    lineWidth: 2,
+                    lineStyle: 0, // Solid
+                    axisLabelVisible: true,
+                    title: 'STOP LOSS',
+                });
+                candlestickSeries.createPriceLine({
+                    price: entryPrice,
+                    color: '#3b82f6',
+                    lineWidth: 1,
+                    lineStyle: 2, // Dashed
+                    axisLabelVisible: true,
+                    title: 'ENTRY',
+                });
+                candlestickSeries.createPriceLine({
+                    price: takeProfit,
+                    color: '#10b981',
+                    lineWidth: 2,
+                    lineStyle: 0,
+                    axisLabelVisible: true,
+                    title: 'TARGET (2R)',
+                });
+            } else {
+                // SHORT
+                const lookback = data.slice(Math.max(0, idx - 10), idx + 1);
+                const highestHigh = Math.max(...lookback.map(c => c.high));
+                stopLoss = highestHigh;
+
+                // Buffer
+                if (stopLoss < entryPrice * 1.005) stopLoss = entryPrice * 1.005;
+
+                const risk = stopLoss - entryPrice;
+                const takeProfit = entryPrice - (risk * 2);
+
+                candlestickSeries.createPriceLine({
+                    price: stopLoss,
+                    color: '#ef4444',
+                    lineWidth: 2,
+                    lineStyle: 0,
+                    axisLabelVisible: true,
+                    title: 'STOP LOSS',
+                });
+                candlestickSeries.createPriceLine({
+                    price: entryPrice,
+                    color: '#3b82f6',
+                    lineWidth: 1,
+                    lineStyle: 2,
+                    axisLabelVisible: true,
+                    title: 'ENTRY',
+                });
+                candlestickSeries.createPriceLine({
+                    price: takeProfit,
+                    color: '#10b981',
+                    lineWidth: 2,
+                    lineStyle: 0,
+                    axisLabelVisible: true,
+                    title: 'TARGET (2R)',
+                });
+            }
+        }
+
         chart.timeScale().fitContent();
 
         window.addEventListener('resize', handleResize);

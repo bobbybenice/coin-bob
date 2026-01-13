@@ -117,3 +117,12 @@ export interface WhaleTransaction {
 }
 
 export type Timeframe = '1m' | '5m' | '1h' | '4h' | '1d';
+
+export type TrendDirection = 'UP' | 'DOWN' | 'NEUTRAL';
+
+export interface AssetTrends {
+    t15m?: TrendDirection;
+    t1h?: TrendDirection;
+    t4h?: TrendDirection;
+    lastUpdated?: number;
+}
