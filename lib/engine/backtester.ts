@@ -1,21 +1,4 @@
-import { Candle, StrategyFunction } from './types';
-
-interface BacktestResult {
-    totalTrades: number;
-    winRate: number;
-    pnl: number;
-    trades: TradeRecord[];
-}
-
-interface TradeRecord {
-    entryTime: number;
-    exitTime: number;
-    entryPrice: number;
-    exitPrice: number;
-    pnl: number;
-    pnlPercent: number;
-    side: 'LONG' | 'SHORT';
-}
+import { Candle, StrategyFunction, BacktestResult, TradeRecord } from './types';
 
 export function runBacktest(
     strategy: StrategyFunction,
@@ -53,31 +36,25 @@ export function runBacktest(
             // We assume worst case: SL happens before TP if both in same candle (pessimistic)
 
             let exitPrice = null;
-            let exitReason = '';
 
             if (currentPosition.side === 'LONG') {
                 if (currentPosition.stopLoss && currentCandle.low <= currentPosition.stopLoss) {
                     exitPrice = currentPosition.stopLoss;
-                    exitReason = 'STOP_LOSS';
                 } else if (currentPosition.takeProfit && currentCandle.high >= currentPosition.takeProfit) {
                     exitPrice = currentPosition.takeProfit;
-                    exitReason = 'TAKE_PROFIT';
                 }
             } else {
                 // SHORT Position
                 if (currentPosition.stopLoss && currentCandle.high >= currentPosition.stopLoss) {
                     exitPrice = currentPosition.stopLoss;
-                    exitReason = 'STOP_LOSS';
                 } else if (currentPosition.takeProfit && currentCandle.low <= currentPosition.takeProfit) {
                     exitPrice = currentPosition.takeProfit;
-                    exitReason = 'TAKE_PROFIT';
                 }
             }
 
             // Signal Exit (Independent of side, usually)
             if (!exitPrice && result.status === 'EXIT') {
                 exitPrice = currentCandle.close;
-                exitReason = 'SIGNAL';
             }
 
             if (exitPrice) {

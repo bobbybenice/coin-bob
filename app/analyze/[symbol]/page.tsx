@@ -115,7 +115,12 @@ function AnalysisPageContent({ params }: { params: Promise<{ symbol: string }> }
 
                     if (strategyName === 'ICT') {
                         const ict = strategyICT(history);
-                        const metadata = ict.metadata as any;
+                        const metadata = ict.metadata as {
+                            sweep?: 'BULLISH' | 'BEARISH';
+                            fvg?: 'BULLISH' | 'BEARISH';
+                            killzone?: string;
+                            isHighProbability?: boolean;
+                        };
 
                         // Reconstruct Signal String for UI
                         let signalString = 'NONE';

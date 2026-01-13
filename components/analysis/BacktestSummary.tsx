@@ -2,9 +2,10 @@
 
 import { Activity } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { BacktestResult } from '@/lib/engine/types';
 
 interface BacktestSummaryProps {
-    results: any;
+    results: BacktestResult | null;
     strategy: string;
     symbol: string;
     timeframe: string;

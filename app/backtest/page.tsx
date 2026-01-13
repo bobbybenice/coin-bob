@@ -4,9 +4,9 @@ import { useState } from 'react';
 import { runBacktest } from '@/lib/engine/backtester';
 import { strategyICT } from '@/lib/engine/strategies/ict';
 import { strategyRSIMFI } from '@/lib/engine/strategies/rsi-mfi-confluence';
-import { useMarketData } from '@/lib/hooks/useMarketData';
+import { BacktestResult } from '@/lib/engine/types';
 import { fetchHistoricalData } from '@/lib/services/market';
-import { Asset, Candle } from '@/lib/types';
+import { Candle } from '@/lib/types';
 import { ArrowLeft, Play, BarChart2, Activity } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { WATCHLIST, SYMBOL_MAP } from '@/lib/constants';
@@ -29,7 +29,7 @@ export default function BacktestPage() {
     const [timeframe, setTimeframe] = useState(searchParams.get('timeframe') || '1h');
     const [strategy, setStrategy] = useState(searchParams.get('strategy') || 'ICT'); // 'ICT' | 'RSI_MFI'
     const [isLoading, setIsLoading] = useState(false);
-    const [results, setResults] = useState<any>(null);
+    const [results, setResults] = useState<BacktestResult | null>(null);
     const [chartData, setChartData] = useState<Candle[]>([]);
 
     const handleRunBacktest = async () => {
@@ -172,13 +172,13 @@ export default function BacktestPage() {
                         </div>
                         <div className="bg-card border border-border rounded-xl p-4">
                             <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Win Rate</h3>
-                            <p className={`text-2xl font-bold mt-1 ${results?.winRate >= 50 ? 'text-emerald-500' : 'text-rose-500'}`}>
+                            <p className={`text-2xl font-bold mt-1 ${(results?.winRate ?? 0) >= 50 ? 'text-emerald-500' : 'text-rose-500'}`}>
                                 {results ? `${results.winRate.toFixed(1)}%` : '-'}
                             </p>
                         </div>
                         <div className="bg-card border border-border rounded-xl p-4">
                             <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Net PnL</h3>
-                            <p className={`text-2xl font-bold mt-1 ${results?.pnl >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+                            <p className={`text-2xl font-bold mt-1 ${(results?.pnl ?? 0) >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
                                 {results ? `$${results.pnl.toFixed(2)}` : '-'}
                             </p>
                         </div>
@@ -192,7 +192,7 @@ export default function BacktestPage() {
                     {results && chartData.length > 0 && (
                         <div className="bg-card border border-border rounded-xl p-4">
                             <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-4">Visualization</h3>
-                            <BacktestChart data={chartData as any} trades={results.trades} />
+                            <BacktestChart data={chartData} trades={results.trades} />
                         </div>
                     )}
 
@@ -232,7 +232,7 @@ export default function BacktestPage() {
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border">
-                                        {results.trades.map((trade: any, i: number) => (
+                                        {results.trades.map((trade, i: number) => (
                                             <tr key={i} className="hover:bg-muted/20 transition-colors">
                                                 <td className="px-6 py-3">
                                                     <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold ${trade.side === 'LONG' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'

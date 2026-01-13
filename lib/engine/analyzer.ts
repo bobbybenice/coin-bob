@@ -37,14 +37,11 @@ export function analyzeAsset(candles: Candle[]): TechnicalAnalysis {
     if (rsi.value > 0 && rsi.value < 30) score += 20;
     if (rsi.value > 70) score -= 10;
 
-    // Trend Scoring
+    // Trending Scoring
     const lastPrice = candles[candles.length - 1]?.close || 0;
-    const change24h = ((lastPrice - (candles[0]?.open || lastPrice)) / (candles[0]?.open || 1)) * 100; // Approx if not passed in, but ideally passed in
-    // Note: binance.ts passes change24h from ticker. Here we rely on candles or input. 
-    // To keep this pure based on candles, we use candle data, but 24h change might strictly be Ticker data.
-    // However, for modularity, let's assume we score based on indicators here, and external caller adds Ticker factors.
-    // But existing logic used Ticker's P (change24h).
-    // Let's stick to Technical score.
+
+    // Scorer logic based on indicators
+
 
     if (ema20.value && lastPrice > ema20.value) score += 10;
     if (ema50.value && ema200.value && ema50.value > ema200.value) score += 20; // Golden Cross

@@ -184,8 +184,7 @@ export function subscribeToBinanceStream(timeframe: Timeframe, callback: (assets
                         history.push(currentCandle);
                     }
 
-                    // Prepare close prices for indicators
-                    const closes = history.map(c => c.close);
+
 
                     // Indicators & Strategies via Engine
                     const analysis = analyzeAsset(history);
@@ -197,10 +196,15 @@ export function subscribeToBinanceStream(timeframe: Timeframe, callback: (assets
                     score = Math.min(100, Math.max(0, score));
 
                     // Map Engine Output to Legacy Asset Structure for UI Compatibility
-                    const ictMetadata = analysis.strategies.ict.metadata as any;
+                    const ictMetadata = analysis.strategies.ict.metadata as {
+                        sweep?: string;
+                        fvg?: string;
+                        killzone?: string;
+                        isHighProbability?: boolean;
+                    };
 
                     // Reconstruct old ICTAnalysis format for UI
-                    let oldSignal: any = 'NONE';
+                    let oldSignal: 'NONE' | 'BULLISH_SWEEP' | 'BEARISH_SWEEP' | 'BULLISH_FVG' | 'BEARISH_FVG' = 'NONE';
                     if (ictMetadata?.sweep === 'BULLISH') oldSignal = 'BULLISH_SWEEP';
                     else if (ictMetadata?.sweep === 'BEARISH') oldSignal = 'BEARISH_SWEEP';
                     else if (ictMetadata?.fvg === 'BULLISH') oldSignal = 'BULLISH_FVG';
@@ -208,7 +212,7 @@ export function subscribeToBinanceStream(timeframe: Timeframe, callback: (assets
 
                     const ictAnalysis = {
                         signal: oldSignal,
-                        fvg: ictMetadata?.fvg ? { type: ictMetadata.fvg } : undefined, // Approximation
+                        fvg: ictMetadata?.fvg ? { type: ictMetadata.fvg as 'BULLISH' | 'BEARISH' } : undefined, // Approximation
                         killzone: ictMetadata?.killzone,
                         isHighProbability: ictMetadata?.isHighProbability || false
                     };
@@ -230,7 +234,8 @@ export function subscribeToBinanceStream(timeframe: Timeframe, callback: (assets
                         ema200: analysis.indicators.ema200.value,
                         macd: analysis.indicators.macd.value,
                         bb: analysis.indicators.bb.value,
-                        ictAnalysis: ictAnalysis as any
+                        ictAnalysis: ictAnalysis
+
                     };
 
                     if (existingIndex >= 0) {
@@ -260,7 +265,7 @@ export function subscribeToBinanceStream(timeframe: Timeframe, callback: (assets
         ws.onerror = null;
         try {
             ws.close();
-        } catch (e) {
+        } catch {
             // ignore 
         }
     };

@@ -26,7 +26,7 @@ export function strategyICT(candles: Candle[]): StrategyResponse {
     const lookback = candles.slice(-21, -1);
 
     const killzone = checkKillzone(current.time);
-    let reasonParts: string[] = [];
+    const reasonParts: string[] = [];
 
     // --- Step 1: Liquidity Sweep ---
     let swingHigh = -Infinity;

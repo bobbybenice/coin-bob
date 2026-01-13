@@ -8,13 +8,13 @@ async function getBTCData(): Promise<Candle[]> {
     const res = await fetch('https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1h&limit=500');
     if (!res.ok) throw new Error('Failed to fetch data');
     const data = await res.json();
-    return data.map((d: any[]) => ({
+    return data.map((d: (string | number)[]) => ({
         time: d[0],
-        open: parseFloat(d[1]),
-        high: parseFloat(d[2]),
-        low: parseFloat(d[3]),
-        close: parseFloat(d[4]),
-        volume: parseFloat(d[5])
+        open: parseFloat(String(d[1])),
+        high: parseFloat(String(d[2])),
+        low: parseFloat(String(d[3])),
+        close: parseFloat(String(d[4])),
+        volume: parseFloat(String(d[5]))
     }));
 }
 

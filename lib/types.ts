@@ -12,8 +12,8 @@ export type ICTSignal = 'BULLISH_SWEEP' | 'BEARISH_SWEEP' | 'BULLISH_FVG' | 'BEA
 export interface ICTAnalysis {
     signal: ICTSignal;
     fvg?: {
-        top: number;
-        bottom: number;
+        top?: number;
+        bottom?: number;
         type: 'BULLISH' | 'BEARISH';
     };
     killzone?: 'LONDON' | 'NEW_YORK';

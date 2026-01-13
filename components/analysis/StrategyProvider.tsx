@@ -11,7 +11,7 @@ export interface AnalysisState {
     confidence: number;
     price: number;
     timeframe: string;
-    metadata?: Record<string, any>;
+    metadata?: Record<string, unknown>;
 }
 
 interface StrategyContextType {

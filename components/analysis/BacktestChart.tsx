@@ -1,6 +1,7 @@
 'use client';
 
-import { createChart, ColorType, ISeriesApi, Time, CandlestickSeries, createSeriesMarkers } from 'lightweight-charts';
+import { createChart, ColorType, Time, CandlestickSeries, createSeriesMarkers } from 'lightweight-charts';
+import { TradeRecord } from '@/lib/engine/types';
 import React, { useEffect, useRef } from 'react';
 import { Candle } from '@/lib/types';
 
@@ -14,7 +15,7 @@ interface TradeMarker {
 
 interface BacktestChartProps {
     data: Candle[];
-    trades: any[]; // using any for now to match flexible trade object structure
+    trades: TradeRecord[];
 }
 
 export default function BacktestChart({ data, trades }: BacktestChartProps) {

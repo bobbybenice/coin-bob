@@ -25,7 +25,7 @@ export function strategyRSIMFI(candles: Candle[]): StrategyResponse {
     // EXIT SHORT: RSI < 50 (Mean reversion complete) or stop loss
 
     let status: StrategyResponse['status'] = 'IDLE';
-    let entryPrice = current.close;
+    const entryPrice = current.close;
     let stopLoss = 0;
     let takeProfit = 0; // We will use RSI mean reversion as primary exit, but provide levels for safety.
     let reason = '';
