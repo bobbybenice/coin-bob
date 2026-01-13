@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import { runBacktest } from '@/lib/engine/backtester';
 import { strategyICT } from '@/lib/engine/strategies/ict';
 import { strategyRSIMFI } from '@/lib/engine/strategies/rsi-mfi-confluence';
@@ -16,7 +16,7 @@ import BacktestSummary from '@/components/analysis/BacktestSummary';
 
 const BacktestChart = dynamic(() => import('@/components/analysis/BacktestChart'), { ssr: false });
 
-export default function BacktestPage() {
+function BacktestContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
 
@@ -264,5 +264,13 @@ export default function BacktestPage() {
                 </div>
             </div>
         </div>
+    );
+}
+
+export default function BacktestPage() {
+    return (
+        <Suspense fallback={<div className="min-h-screen bg-background text-foreground p-6 flex items-center justify-center">Loading...</div>}>
+            <BacktestContent />
+        </Suspense>
     );
 }
