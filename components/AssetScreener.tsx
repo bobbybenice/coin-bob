@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect, useRef } from 'react';
 import { useMarketData } from '@/lib/hooks/useMarketData';
 import { useFearAndGreed } from '@/lib/hooks/useFearAndGreed';
 import { useUserStore } from '@/lib/store';
-import { Search, X, TrendingUp, Activity, Gauge } from 'lucide-react';
+import { Search, X, TrendingUp, Activity, Gauge, Play } from 'lucide-react';
 
 type SortField = 'price' | 'change24h' | 'rsi' | 'bobScore' | 'symbol';
 type SortDirection = 'asc' | 'desc';
@@ -365,15 +365,24 @@ export default function AssetScreener() {
                       )}
                     </td>
                     <td className="py-2.5 px-4 text-center">
-                      <button
-                        onClick={(e) => { e.stopPropagation(); toggleFavorite(asset.id); }}
-                        className={`p-1.5 rounded-md transition-all ${settings.favorites.includes(asset.id)
-                          ? 'text-amber-400 bg-amber-400/10 hover:bg-amber-400/20'
-                          : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
-                          }`}
-                      >
-                        {settings.favorites.includes(asset.id) ? '★' : '☆'}
-                      </button>
+                      <div className="flex items-center justify-center gap-1">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); router.push(`/backtest?symbol=${asset.symbol}&timeframe=${settings.timeframe}`); }}
+                          className="p-1.5 rounded-md text-muted-foreground hover:text-emerald-400 hover:bg-emerald-500/10 transition-all"
+                          title="Run Backtest"
+                        >
+                          <Play className="w-3.5 h-3.5 fill-current" />
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); toggleFavorite(asset.id); }}
+                          className={`p-1.5 rounded-md transition-all ${settings.favorites.includes(asset.id)
+                            ? 'text-amber-400 bg-amber-400/10 hover:bg-amber-400/20'
+                            : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+                            }`}
+                        >
+                          {settings.favorites.includes(asset.id) ? '★' : '☆'}
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 )

@@ -1,8 +1,6 @@
 "use client";
 
 import React, { createContext, useContext, useState, ReactNode } from "react";
-// import { ICTSignal } from "@/lib/types"; 
-// Removed unused import
 
 export interface AnalysisState {
     id: string;
@@ -13,33 +11,29 @@ export interface AnalysisState {
     confidence: number;
     price: number;
     timeframe: string;
-    killzoneLabel?: string;
+    metadata?: Record<string, any>;
 }
 
 interface StrategyContextType {
     strategyName: string;
-    ictState: AnalysisState | null;
-    setICTState: (state: AnalysisState) => void;
-    // Placeholder for future strategies
-    meta: Record<string, unknown>;
-    setMeta: (meta: Record<string, unknown>) => void;
+    setStrategyName: (name: string) => void;
+    analysisState: AnalysisState | null;
+    setAnalysisState: (state: AnalysisState | null) => void;
 }
 
 const StrategyContext = createContext<StrategyContextType | undefined>(undefined);
 
 export function StrategyProvider({ children }: { children: ReactNode }) {
-    const [strategyName] = useState("ICT_v1");
-    const [ictState, setICTState] = useState<AnalysisState | null>(null);
-    const [meta, setMeta] = useState({});
+    const [strategyName, setStrategyName] = useState("ICT");
+    const [analysisState, setAnalysisState] = useState<AnalysisState | null>(null);
 
     return (
         <StrategyContext.Provider
             value={{
                 strategyName,
-                ictState,
-                setICTState,
-                meta,
-                setMeta,
+                setStrategyName,
+                analysisState,
+                setAnalysisState,
             }}
         >
             {children}

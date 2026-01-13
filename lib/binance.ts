@@ -1,8 +1,7 @@
 import { Asset, Candle, Timeframe } from './types';
-import { RSI, EMA, MACD, BollingerBands } from 'technicalindicators';
 import { WATCHLIST, SYMBOL_MAP } from './constants';
 import { fetchHistoricalData } from '@/lib/services/market';
-import { analyzeICT } from '@/lib/services/ict-engine';
+import { analyzeAsset } from '@/lib/engine/analyzer';
 
 interface BinanceTicker {
     s: string;
@@ -188,65 +187,31 @@ export function subscribeToBinanceStream(timeframe: Timeframe, callback: (assets
                     // Prepare close prices for indicators
                     const closes = history.map(c => c.close);
 
-                    // Indicators
-                    let rsi = 0;
-                    let ema20, ema50, ema200;
-                    let macd, bb;
+                    // Indicators & Strategies via Engine
+                    const analysis = analyzeAsset(history);
 
-                    if (closes.length > 50) {
-                        // RSI
-                        const rsiValues = RSI.calculate({ period: 14, values: closes });
-                        rsi = rsiValues.length > 0 ? rsiValues[rsiValues.length - 1] : 0;
-
-                        // EMAs
-                        const ema20Values = EMA.calculate({ period: 20, values: closes });
-                        ema20 = ema20Values.length > 0 ? ema20Values[ema20Values.length - 1] : undefined;
-
-                        const ema50Values = EMA.calculate({ period: 50, values: closes });
-                        ema50 = ema50Values.length > 0 ? ema50Values[ema50Values.length - 1] : undefined;
-
-                        const ema200Values = EMA.calculate({ period: 200, values: closes });
-                        ema200 = ema200Values.length > 0 ? ema200Values[ema200Values.length - 1] : undefined;
-
-                        // MACD (12, 26, 9)
-                        const macdValues = MACD.calculate({
-                            values: closes,
-                            fastPeriod: 12,
-                            slowPeriod: 26,
-                            signalPeriod: 9,
-                            SimpleMAOscillator: false,
-                            SimpleMASignal: false
-                        });
-                        macd = macdValues.length > 0 ? macdValues[macdValues.length - 1] : undefined;
-
-                        // Bollinger Bands (20, 2)
-                        const bbValues = BollingerBands.calculate({
-                            period: 20,
-                            stdDev: 2,
-                            values: closes
-                        });
-                        bb = bbValues.length > 0 ? bbValues[bbValues.length - 1] : undefined;
-                    }
-
-                    // ICT Analysis
-                    const ictAnalysis = analyzeICT(history);
-
-                    // Bob Score
+                    // Bob Score Integration (add ticker-specific score)
+                    let score = analysis.score;
                     const change24h = parseFloat(t.P);
-                    let score = 50;
-                    if (rsi > 0 && rsi < 30) score += 20;
-                    if (rsi > 70) score -= 10;
                     if (change24h > 5) score += 10;
-                    if (ema20 && price > ema20) score += 10;
-                    if (ema50 && ema200 && ema50 > ema200) score += 20; // Golden Cross
+                    score = Math.min(100, Math.max(0, score));
 
-                    // ICT Score Impact
-                    if (ictAnalysis.signal === 'BULLISH_SWEEP' || ictAnalysis.signal === 'BULLISH_FVG') score += 15;
-                    if (ictAnalysis.isHighProbability) score += 10;
+                    // Map Engine Output to Legacy Asset Structure for UI Compatibility
+                    const ictMetadata = analysis.strategies.ict.metadata as any;
 
-                    // Advanced Score logic
-                    if (macd && macd.histogram && macd.histogram > 0) score += 5; // Bullish momentum
-                    if (bb && price < bb.lower) score += 15; // Deep Value Buy Zone
+                    // Reconstruct old ICTAnalysis format for UI
+                    let oldSignal: any = 'NONE';
+                    if (ictMetadata?.sweep === 'BULLISH') oldSignal = 'BULLISH_SWEEP';
+                    else if (ictMetadata?.sweep === 'BEARISH') oldSignal = 'BEARISH_SWEEP';
+                    else if (ictMetadata?.fvg === 'BULLISH') oldSignal = 'BULLISH_FVG';
+                    else if (ictMetadata?.fvg === 'BEARISH') oldSignal = 'BEARISH_FVG';
+
+                    const ictAnalysis = {
+                        signal: oldSignal,
+                        fvg: ictMetadata?.fvg ? { type: ictMetadata.fvg } : undefined, // Approximation
+                        killzone: ictMetadata?.killzone,
+                        isHighProbability: ictMetadata?.isHighProbability || false
+                    };
 
                     const existingIndex = latestAssets.findIndex(a => a.symbol === t.s.replace('USDT', ''));
 
@@ -258,14 +223,14 @@ export function subscribeToBinanceStream(timeframe: Timeframe, callback: (assets
                         change24h: change24h,
                         volume24h: parseFloat(t.v),
                         marketCap: 0,
-                        rsi: Math.min(100, Math.max(0, rsi)),
-                        bobScore: Math.min(100, Math.max(0, score)),
-                        ema20,
-                        ema50,
-                        ema200,
-                        macd,
-                        bb,
-                        ictAnalysis
+                        rsi: analysis.indicators.rsi.value,
+                        bobScore: score,
+                        ema20: analysis.indicators.ema20.value,
+                        ema50: analysis.indicators.ema50.value,
+                        ema200: analysis.indicators.ema200.value,
+                        macd: analysis.indicators.macd.value,
+                        bb: analysis.indicators.bb.value,
+                        ictAnalysis: ictAnalysis as any
                     };
 
                     if (existingIndex >= 0) {
@@ -291,6 +256,12 @@ export function subscribeToBinanceStream(timeframe: Timeframe, callback: (assets
 
     return () => {
         clearInterval(interval);
-        ws.close();
+        ws.onmessage = null;
+        ws.onerror = null;
+        try {
+            ws.close();
+        } catch (e) {
+            // ignore 
+        }
     };
 }

@@ -17,10 +17,10 @@ const Card = ({ children, className }: { children: React.ReactNode, className?: 
 );
 
 export function StrategyPanel() {
-    const { ictState } = useStrategy();
+    const { analysisState, strategyName } = useStrategy();
 
     // Mock state if null for visualization during dev
-    const activeState = ictState || {
+    const activeState = analysisState || {
         id: "loading",
         symbol: "...",
         timestamp: Date.now(),
@@ -29,28 +29,43 @@ export function StrategyPanel() {
         confidence: 0,
         price: 0,
         timeframe: "--",
-        killzoneLabel: undefined,
+        metadata: {},
     };
 
-    const isEntry = activeState.stage === "ENTRY_FVG" || activeState.stage === "ENTRY_MSS";
+    const isEntry = activeState.stage.includes("ENTRY");
+
+    // Dynamic Metadata Logic
+    const renderMetadata = () => {
+        if (strategyName === 'ICT' && activeState.metadata?.killzone) {
+            return (
+                <Badge variant="secondary" className="text-xs">
+                    {activeState.metadata.killzone}
+                </Badge>
+            );
+        }
+        if (strategyName === 'RSI_MFI' && activeState.metadata?.rsi) {
+            return (
+                <Badge variant="secondary" className="text-xs font-mono">
+                    RSI: {Number(activeState.metadata.rsi).toFixed(1)}
+                </Badge>
+            );
+        }
+        return null;
+    };
 
     return (
         <Card className="p-4 border-t border-border bg-card/50 backdrop-blur-sm">
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
                     <div className="flex flex-col">
-                        <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
-                            Strategy Status
+                        <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">
+                            {strategyName} Status
                         </h3>
-                        <div className="flex items-center gap-2 mt-1">
-                            <Badge variant={isEntry ? "default" : "outline"} className={isEntry ? "bg-green-500 hover:bg-green-600 animate-pulse" : ""}>
+                        <div className="flex items-center gap-2">
+                            <Badge variant={isEntry ? "default" : "outline"} className={isEntry ? "bg-emerald-500 hover:bg-emerald-600 animate-pulse" : ""}>
                                 {activeState.stage.replace("_", " ")}
                             </Badge>
-                            {activeState.killzoneLabel && (
-                                <Badge variant="secondary" className="text-xs">
-                                    {activeState.killzoneLabel}
-                                </Badge>
-                            )}
+                            {renderMetadata()}
                         </div>
                     </div>
 
@@ -61,7 +76,7 @@ export function StrategyPanel() {
                         <span>
                             Bias: <span className={
                                 activeState.type === "NEUTRAL" ? "text-muted-foreground" :
-                                    activeState.type.includes("LONG") ? "text-green-500" : "text-red-500"
+                                    activeState.type.includes("LONG") || activeState.type === "BULLISH" ? "text-emerald-500" : "text-rose-500"
                             }>{activeState.type}</span>
                         </span>
                     </div>
@@ -72,7 +87,7 @@ export function StrategyPanel() {
                         <p className="text-xs text-muted-foreground">Analysing</p>
                         <p className="font-mono text-sm">{activeState.timeframe} Structure</p>
                     </div>
-                    <Zap className={`w-5 h-5 ${isEntry ? "text-yellow-400 fill-yellow-400" : "text-muted-foreground"}`} />
+                    <Zap className={`w-5 h-5 ${isEntry ? "text-amber-400 fill-amber-400" : "text-muted-foreground"}`} />
                 </div>
             </div>
         </Card>
