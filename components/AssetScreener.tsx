@@ -6,7 +6,7 @@ import { useFearAndGreed } from '@/lib/hooks/useFearAndGreed';
 import { useUserStore } from '@/lib/store';
 import { Search, X, TrendingUp, Activity, Gauge, Play } from 'lucide-react';
 
-type SortField = 'price' | 'change24h' | 'rsi' | 'bobScore' | 'symbol';
+type SortField = 'price' | 'change24h' | 'rsi' | 'bobScore' | 'symbol' | 'volume24h';
 type SortDirection = 'asc' | 'desc';
 
 import { useRouter } from 'next/navigation';
@@ -136,6 +136,13 @@ export default function AssetScreener() {
 
       const isBBLow = asset.bb && asset.price < asset.bb.lower;
       if (settings.filters.bbLow && !isBBLow) return false;
+
+      // 5. ICT Filters
+      const signal = asset.ictAnalysis?.signal;
+      if (settings.filters.ictBullishSweep && signal !== 'BULLISH_SWEEP') return false;
+      if (settings.filters.ictBearishSweep && signal !== 'BEARISH_SWEEP') return false;
+      if (settings.filters.ictBullishFVG && signal !== 'BULLISH_FVG') return false;
+      if (settings.filters.ictBearishFVG && signal !== 'BEARISH_FVG') return false;
 
       return true;
     }).sort((a, b) => {
@@ -270,18 +277,24 @@ export default function AssetScreener() {
                 </th>
                 <th
                   className="py-3 px-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider text-right cursor-pointer hover:text-zinc-300 transition-colors select-none"
+                  onClick={() => handleSort('volume24h')}
+                >
+                  Vol (24h) <SortIcon field="volume24h" />
+                </th>
+                <th
+                  className="py-3 px-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider text-right cursor-pointer hover:text-zinc-300 transition-colors select-none"
                   onClick={() => handleSort('rsi')}
                 >
                   RSI <SortIcon field="rsi" />
+                </th>
+                <th className="py-3 px-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider text-center">
+                  Strategy Matrix
                 </th>
                 <th
                   className="py-3 px-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider text-right cursor-pointer hover:text-zinc-300 transition-colors select-none"
                   onClick={() => handleSort('bobScore')}
                 >
                   Score <SortIcon field="bobScore" />
-                </th>
-                <th className="py-3 px-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider text-center">
-                  Signal
                 </th>
                 <th className="py-3 px-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider text-center">
                   Act
@@ -297,8 +310,6 @@ export default function AssetScreener() {
                 const isActive = activeAsset === asset.symbol;
 
                 const signal = asset.ictAnalysis?.signal;
-                const killzone = asset.ictAnalysis?.killzone;
-                const isHighProb = asset.ictAnalysis?.isHighProbability;
 
                 return (
                   <tr
@@ -319,11 +330,7 @@ export default function AssetScreener() {
                           <div className="text-[10px] text-muted-foreground font-medium">{asset.name}</div>
                         </div>
                         {/* Indicators Row inside Asset Column for density? No, keep it clean. */}
-                        <div className="flex gap-1 ml-2 opacity-50 group-hover:opacity-100 transition-opacity">
-                          {isGolden && <div className="w-1.5 h-1.5 rounded-full bg-amber-500 shadow-[0_0_5px_rgba(245,158,11,0.5)]" title="Golden Cross"></div>}
-                          {isUptrend && <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.5)]" title="Uptrend"></div>}
-                          {isMacd && <div className="w-1.5 h-1.5 rounded-full bg-blue-500 shadow-[0_0_5px_rgba(59,130,246,0.5)]" title="MACD Bullish"></div>}
-                        </div>
+
                       </div>
                     </td>
                     <td className="py-2.5 px-4 text-right font-mono text-sm text-muted-foreground group-hover:text-foreground transition-colors">
@@ -331,6 +338,10 @@ export default function AssetScreener() {
                     </td>
                     <td className={`py-2.5 px-4 text-right font-mono text-sm font-medium ${asset.change24h >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
                       {asset.change24h > 0 ? '+' : ''}{asset.change24h.toFixed(2)}%
+                    </td>
+                    <td className="py-2.5 px-4 text-right font-mono text-sm text-muted-foreground">
+                      <span className="text-foreground font-medium">{(asset.volume24h / 1000000).toFixed(1)}</span>
+                      <span className="text-zinc-600 text-[10px] ml-0.5">M</span>
                     </td>
                     <td className="py-2.5 px-4 text-right">
                       <span className={`inline-flex px-1.5 py-0.5 rounded text-[10px] font-mono font-bold min-w-[32px] justify-center ${asset.rsi < 30 ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
@@ -340,29 +351,39 @@ export default function AssetScreener() {
                         {asset.rsi.toFixed(0)}
                       </span>
                     </td>
+                    <td className="py-2.5 px-4 text-center">
+                      <div className="flex items-center justify-center gap-2">
+                        {/* RSI Indicator */}
+                        <div className="flex flex-col items-center gap-0.5 group/ind">
+                          <span className="text-[8px] text-zinc-600 font-mono group-hover/ind:text-zinc-400">RSI</span>
+                          <div className={`w-2 h-2 rounded-full ${asset.rsi < 30 ? 'bg-emerald-500 animate-pulse shadow-[0_0_5px_currentColor]' : asset.rsi > 70 ? 'bg-rose-500 shadow-[0_0_5px_currentColor]' : 'bg-zinc-800'}`} />
+                        </div>
+                        {/* MACD Indicator */}
+                        <div className="flex flex-col items-center gap-0.5 group/ind">
+                          <span className="text-[8px] text-zinc-600 font-mono group-hover/ind:text-zinc-400">MCD</span>
+                          <div className={`w-2 h-2 rounded-full ${isMacd ? 'bg-emerald-500' : 'bg-rose-800'}`} />
+                        </div>
+                        {/* Trend Indicator */}
+                        <div className="flex flex-col items-center gap-0.5 group/ind">
+                          <span className="text-[8px] text-zinc-600 font-mono group-hover/ind:text-zinc-400">TRD</span>
+                          <div className={`w-2 h-2 rounded-full ${isGolden ? 'bg-amber-400 animate-pulse' : isUptrend ? 'bg-emerald-500' : 'bg-zinc-800'}`} />
+                        </div>
+                        {/* ICT Indicator */}
+                        <div className="flex flex-col items-center gap-0.5 group/ind">
+                          <span className="text-[8px] text-zinc-600 font-mono group-hover/ind:text-zinc-400">ICT</span>
+                          <div className={`w-2 h-2 rounded-full ${signal?.includes('BULLISH') ? 'bg-emerald-500 shadow-[0_0_8px_currentColor]' : signal?.includes('BEARISH') ? 'bg-rose-500 shadow-[0_0_8px_currentColor]' : 'bg-zinc-800'}`} />
+                        </div>
+                      </div>
+                    </td>
                     <td className="py-2.5 px-4 text-right">
                       <div className="flex justify-end">
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ring-1 ring-inset ${asset.bobScore > 80 ? 'bg-gradient-to-br from-emerald-500/20 to-emerald-900/10 text-emerald-400 ring-emerald-500/30' :
+                        <div className={`relative w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ring-1 ring-inset ${asset.bobScore > 80 ? 'bg-emerald-500/10 text-emerald-400 ring-emerald-500/30' :
                           asset.bobScore > 50 ? 'bg-muted text-muted-foreground ring-border' :
                             'bg-rose-900/10 text-rose-500 ring-rose-500/20'
                           }`}>
                           {asset.bobScore.toFixed(0)}
                         </div>
                       </div>
-                    </td>
-                    <td className="py-2.5 px-4 text-center">
-                      {signal && signal !== 'NONE' ? (
-                        <div className={`inline-flex flex-col items-center justify-center px-1.5 py-0.5 rounded text-[10px] font-bold border ${isHighProb ? 'animate-pulse ring-1 ring-offset-1 ring-offset-background' : ''
-                          } ${signal.includes('BULLISH')
-                            ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 ring-emerald-500/50'
-                            : 'bg-rose-500/10 text-rose-400 border-rose-500/20 ring-rose-500/50'
-                          }`}>
-                          <span>{signal === 'BULLISH_SWEEP' ? 'SWEEP' : signal === 'BULLISH_FVG' ? 'FVG' : signal === 'BEARISH_SWEEP' ? 'SWEEP' : 'FVG'}</span>
-                          {killzone && <span className="text-[8px] opacity-70 leading-none mt-0.5">{killzone}</span>}
-                        </div>
-                      ) : (
-                        <span className="text-muted-foreground/30 text-[10px]">-</span>
-                      )}
                     </td>
                     <td className="py-2.5 px-4 text-center">
                       <div className="flex items-center justify-center gap-1">
@@ -390,7 +411,7 @@ export default function AssetScreener() {
 
               {filteredAssets.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="py-20 text-center text-muted-foreground">
+                  <td colSpan={8} className="py-20 text-center text-muted-foreground">
                     <div className="flex flex-col items-center gap-2">
                       {isLoading ? (
                         <>

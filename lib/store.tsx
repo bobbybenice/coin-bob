@@ -17,6 +17,10 @@ const DEFAULT_SETTINGS: UserSettings = {
         aboveEma20: false,
         macdBullish: false,
         bbLow: false,
+        ictBullishSweep: false,
+        ictBearishSweep: false,
+        ictBullishFVG: false,
+        ictBearishFVG: false,
     },
     timeframe: '1d',
 };

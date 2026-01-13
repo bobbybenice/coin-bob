@@ -99,6 +99,36 @@ export default function AnalysisEngine() {
                     ))}
                 </div>
 
+                <div className="space-y-3">
+                    <h3 className="text-[10px] font-bold text-violet-500/80 uppercase tracking-widest pl-1">ICT Smart Money</h3>
+                    {[
+                        { label: 'Bullish Sweep', sub: 'Liquidity Grab (Long)', key: 'ictBullishSweep', color: 'emerald' },
+                        { label: 'Bearish Sweep', sub: 'Liquidity Grab (Short)', key: 'ictBearishSweep', color: 'rose' },
+                        { label: 'Bullish FVG', sub: 'Fair Value Gap (Long)', key: 'ictBullishFVG', color: 'emerald' },
+                        { label: 'Bearish FVG', sub: 'Fair Value Gap (Short)', key: 'ictBearishFVG', color: 'rose' },
+                    ].map((item) => (
+                        <label key={item.key} className="flex items-center justify-between group cursor-pointer p-2.5 rounded-lg bg-muted/30 border border-border hover:border-border hover:bg-muted/50 transition-all">
+                            <div>
+                                <span className="text-foreground font-medium text-sm block">{item.label}</span>
+                                <span className="text-[10px] text-muted-foreground font-medium">{item.sub}</span>
+                            </div>
+                            <div className="relative flex items-center">
+                                <input
+                                    type="checkbox"
+                                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                                    checked={(filters as any)[item.key]}
+                                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                                    onChange={(e) => updateFilters({ [item.key]: e.target.checked } as any)}
+                                    className={`peer appearance-none w-5 h-5 rounded border border-input bg-background checked:bg-${item.color}-500 checked:border-${item.color}-500 transition-colors cursor-pointer`}
+                                />
+                                <svg className="absolute w-3.5 h-3.5 text-foreground pointer-events-none opacity-0 peer-checked:opacity-100 left-0.5 top-0.5" viewBox="0 0 14 14" fill="none">
+                                    <path d="M3 7L6 10L11 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                </svg>
+                            </div>
+                        </label>
+                    ))}
+                </div>
+
                 {/* Technical Filters */}
                 <div className="space-y-4">
                     <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest pl-1">Manual Tuning</h3>
@@ -159,7 +189,11 @@ export default function AnalysisEngine() {
                         goldenCross: false,
                         aboveEma20: false,
                         macdBullish: false,
-                        bbLow: false
+                        bbLow: false,
+                        ictBullishSweep: false,
+                        ictBearishSweep: false,
+                        ictBullishFVG: false,
+                        ictBearishFVG: false
                     })}
                     className="w-full py-2.5 px-4 rounded-lg bg-muted hover:bg-muted/80 text-xs font-bold uppercase tracking-wider transition-colors text-muted-foreground hover:text-foreground border border-border hover:border-input"
                 >

@@ -58,6 +58,11 @@ export interface FilterCriteria {
     aboveEma20: boolean;   // Price > EMA 20
     macdBullish: boolean;  // MACD Histogram > 0
     bbLow: boolean;        // Price < Lower Band
+    // ICT Filters
+    ictBullishSweep: boolean;
+    ictBearishSweep: boolean;
+    ictBullishFVG: boolean;
+    ictBearishFVG: boolean;
 }
 
 
