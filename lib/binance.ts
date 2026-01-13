@@ -199,7 +199,7 @@ export function subscribeToBinanceStream(timeframe: Timeframe, callback: (assets
                     const ictMetadata = analysis.strategies.ict.metadata as {
                         sweep?: string;
                         fvg?: string;
-                        killzone?: string;
+                        killzone?: 'LONDON' | 'NEW_YORK';
                         isHighProbability?: boolean;
                     };
 

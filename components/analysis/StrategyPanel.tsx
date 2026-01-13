@@ -36,19 +36,25 @@ export function StrategyPanel() {
 
     // Dynamic Metadata Logic
     const renderMetadata = () => {
-        if (strategyName === 'ICT' && activeState.metadata?.killzone) {
-            return (
-                <Badge variant="secondary" className="text-xs">
-                    {activeState.metadata.killzone}
-                </Badge>
-            );
+        if (strategyName === 'ICT') {
+            const meta = activeState.metadata as { killzone?: string } | undefined;
+            if (meta?.killzone) {
+                return (
+                    <Badge variant="secondary" className="text-xs">
+                        {meta.killzone}
+                    </Badge>
+                );
+            }
         }
-        if (strategyName === 'RSI_MFI' && activeState.metadata?.rsi) {
-            return (
-                <Badge variant="secondary" className="text-xs font-mono">
-                    RSI: {Number(activeState.metadata.rsi).toFixed(1)}
-                </Badge>
-            );
+        if (strategyName === 'RSI_MFI') {
+            const meta = activeState.metadata as { rsi?: number | string } | undefined;
+            if (meta?.rsi) {
+                return (
+                    <Badge variant="secondary" className="text-xs font-mono">
+                        RSI: {Number(meta.rsi).toFixed(1)}
+                    </Badge>
+                );
+            }
         }
         return null;
     };
