@@ -6,7 +6,7 @@ export async function fetchHistoricalData(symbol: string, interval: string = '1d
     const sources = [
         {
             name: 'Binance Global',
-            url: `https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${interval}&limit=250`,
+            url: `https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${interval}&limit=500`,
             adapter: (json: any): Candle[] => {
                 return Array.isArray(json) ? json.map((d: any[]) => ({
                     time: d[0],
@@ -20,7 +20,7 @@ export async function fetchHistoricalData(symbol: string, interval: string = '1d
         },
         {
             name: 'Binance US', // Good for US IP addresses 
-            url: `https://api.binance.us/api/v3/klines?symbol=${symbol}&interval=${interval}&limit=250`,
+            url: `https://api.binance.us/api/v3/klines?symbol=${symbol}&interval=${interval}&limit=500`,
             adapter: (json: any): Candle[] => {
                 return Array.isArray(json) ? json.map((d: any[]) => ({
                     time: d[0],
