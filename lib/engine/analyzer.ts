@@ -30,28 +30,41 @@ export function analyzeAsset(candles: Candle[]): TechnicalAnalysis {
 
     const ict = strategyICT(candles);
 
-    // Score Calculation
+    // --- Scorer Logic (0 = Strong Short | 50 = Neutral | 100 = Strong Long) ---
     let score = 50;
+    const currentPrice = candles[candles.length - 1]?.close || 0;
 
-    // RSI Scoring
-    if (rsi.value > 0 && rsi.value < 30) score += 20;
-    if (rsi.value > 70) score -= 10;
+    // 1. Trend Context (+/- 25)
+    // Bullish Trend
+    if (ema200.value && currentPrice > ema200.value) score += 15;
+    if (ema50.value && ema200.value && ema50.value > ema200.value) score += 10;
 
-    // Trending Scoring
-    const lastPrice = candles[candles.length - 1]?.close || 0;
+    // Bearish Trend
+    if (ema200.value && currentPrice < ema200.value) score -= 15;
+    if (ema50.value && ema200.value && ema50.value < ema200.value) score -= 10;
 
-    // Scorer logic based on indicators
+    // 2. Momentum / Exhaustion (+/- 25)
+    // Oversold (Bullish Reversal / Dip Buy)
+    if (rsi.value < 30) score += 20;
+    else if (rsi.value < 45) score += 10;
 
+    // Overbought (Bearish Reversal / Top Short)
+    if (rsi.value > 70) score -= 20;
+    else if (rsi.value > 55) score -= 10;
 
-    if (ema20.value && lastPrice > ema20.value) score += 10;
-    if (ema50.value && ema200.value && ema50.value > ema200.value) score += 20; // Golden Cross
+    // Bollinger Band Interaction
+    if (bb.value.lower && currentPrice < bb.value.lower) score += 5;
+    if (bb.value.upper && currentPrice > bb.value.upper) score -= 5;
 
-    // Strategy Scoring
-    if (ict.status === 'ENTRY') score += 15; // Sweep or Signal
-    if (ict.metadata?.isHighProbability) score += 10;
+    // 3. Triggers (ICT) (+/- 25)
+    const sweep = ict.metadata?.sweep; // BULLISH | BEARISH
+    const fvg = ict.metadata?.fvg; // BULLISH | BEARISH
 
-    if (macd.value.histogram && macd.value.histogram > 0) score += 5;
-    if (bb.value.lower && lastPrice < bb.value.lower) score += 15;
+    if (sweep === 'BULLISH') score += 15;
+    if (sweep === 'BEARISH') score -= 15;
+
+    if (fvg === 'BULLISH') score += 10;
+    if (fvg === 'BEARISH') score -= 10;
 
     return {
         indicators: {

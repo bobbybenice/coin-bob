@@ -17,6 +17,7 @@ import { Play, Settings2 } from "lucide-react";
 import dynamic from 'next/dynamic';
 import { scanSignals, Signal } from '@/lib/engine/signal-scanner';
 
+import { analyzeAsset } from "@/lib/engine/analyzer";
 const SignalChart = dynamic(() => import('@/components/analysis/SignalChart'), { ssr: false });
 
 // Wrapper to provide text context to BobAI based on strategy
@@ -31,6 +32,7 @@ function AnalysisAdvisor({ symbol }: { symbol: string }) {
         Strategy: ${strategyName}
         Current State: ${analysisState.stage}
         Bias: ${analysisState.type}
+        Score: ${analysisState.metadata?.score || 'N/A'} (${analysisState.metadata?.scoreReason || ''})
         Timeframe: ${analysisState.timeframe}
         Price: ${analysisState.price}
         Confidence: ${analysisState.confidence}%
@@ -119,7 +121,37 @@ function AnalysisPageContent({ params }: { params: Promise<{ symbol: string }> }
                 const history = await fetchHistoricalData(pairSymbol, apiInterval);
 
                 if (history && history.length > 50) {
+                    // Get Global Bob Score for Bias Context
+                    const globalAnalysis = analyzeAsset(history);
+                    const score = globalAnalysis.score;
+                    const inds = globalAnalysis.indicators;
+
+                    // Generate Explanation
+                    const currentPrice = history[history.length - 1].close;
+                    const isUptrend = inds.ema200.value ? currentPrice > inds.ema200.value : false;
+
+                    let reason = isUptrend ? "Price is above the 200 EMA (Uptrend)." : "Price is below the 200 EMA (Downtrend).";
+
+                    // RSI Context
+                    if (inds.rsi.value > 70) reason += " RSI is Overbought (High Risk).";
+                    else if (inds.rsi.value < 30) reason += " RSI is Oversold (Dip Opportunity).";
+
+                    // Contextual Momentum (Trend Aware)
+                    else if (isUptrend && inds.rsi.value < 50) reason += " Bullish Dip setup.";
+                    else if (!isUptrend && inds.rsi.value > 50) reason += " Bearish Pullback setup.";
+
+                    else if (inds.rsi.value > 55) reason += " Momentum is Strong.";
+                    else if (inds.rsi.value < 45) reason += " Momentum is Weak.";
+                    else reason += " Momentum is Neutral.";
+
                     let stateObj: AnalysisState;
+                    let biasType = 'NEUTRAL';
+
+                    // Determine Bias from Score first (Background Trend)
+                    if (score >= 80) biasType = 'STRONG_BULLISH';
+                    else if (score >= 60) biasType = 'BULLISH';
+                    else if (score <= 20) biasType = 'STRONG_BEARISH';
+                    else if (score <= 40) biasType = 'BEARISH';
 
                     if (strategyName === 'ICT') {
                         const ict = strategyICT(history);
@@ -137,33 +169,50 @@ function AnalysisPageContent({ params }: { params: Promise<{ symbol: string }> }
                         else if (metadata?.fvg === 'BULLISH') signalString = 'BULLISH_FVG';
                         else if (metadata?.fvg === 'BEARISH') signalString = 'BEARISH_FVG';
 
+                        // Override Bias if Signal Present
+                        if (signalString !== 'NONE') {
+                            biasType = signalString.includes('BULLISH') ? 'SCALP_LONG' : 'SCALP_SHORT';
+                        }
+
                         stateObj = {
                             id: `${symbol}-${Date.now()}`,
                             symbol: symbol,
                             timestamp: Date.now(),
-                            type: signalString === 'NONE' ? 'NEUTRAL' :
-                                signalString.includes('BULLISH') ? 'SCALP_LONG' : 'SCALP_SHORT',
-                            stage: signalString,
-                            confidence: metadata?.isHighProbability ? 85 : 50,
+                            type: biasType,
+                            stage: signalString !== 'NONE' ? signalString : 'MONITORING',
+                            confidence: metadata?.isHighProbability ? 85 : (score > 60 || score < 40 ? 65 : 50),
                             price: history[history.length - 1].close,
                             timeframe: apiInterval,
-                            metadata: { killzone: metadata?.killzone }
+                            metadata: {
+                                killzone: metadata?.killzone,
+                                score: score,
+                                scoreReason: reason
+                            }
                         };
                     } else {
                         // RSI + MFI
                         const res = strategyRSIMFI(history);
                         const side = res.metadata?.side as string; // 'LONG' | 'SHORT'
 
+                        // Override Bias if Signal Present
+                        if (res.status === 'ENTRY') {
+                            biasType = side === 'LONG' ? 'SCALP_LONG' : 'SCALP_SHORT';
+                        }
+
                         stateObj = {
                             id: `${symbol}-${Date.now()}`,
                             symbol: symbol,
                             timestamp: Date.now(),
-                            type: res.status === 'ENTRY' ? (side === 'LONG' ? 'SCALP_LONG' : 'SCALP_SHORT') : 'NEUTRAL',
+                            type: biasType,
                             stage: res.status === 'ENTRY' ? 'ENTRY_SIGNAL' : 'MONITORING',
                             confidence: 75, // Static for now
                             price: history[history.length - 1].close,
                             timeframe: apiInterval,
-                            metadata: res.metadata
+                            metadata: {
+                                ...res.metadata,
+                                score: score,
+                                scoreReason: reason
+                            }
                         };
                     }
 

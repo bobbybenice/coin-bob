@@ -3,16 +3,17 @@
 import { useState, Suspense } from 'react';
 import { runBacktest } from '@/lib/engine/backtester';
 import { strategyICT } from '@/lib/engine/strategies/ict';
-import { strategyRSIMFI } from '@/lib/engine/strategies/rsi-mfi-confluence';
+import { strategyRSIMFI, RSIMFIOptions } from '@/lib/engine/strategies/rsi-mfi-confluence';
 import { BacktestResult } from '@/lib/engine/types';
 import { fetchHistoricalData } from '@/lib/services/market';
 import { Candle } from '@/lib/types';
-import { ArrowLeft, Play, BarChart2, Activity } from 'lucide-react';
+import { ArrowLeft, Play, BarChart2, Activity, Sparkles, CheckCircle } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { WATCHLIST, SYMBOL_MAP } from '@/lib/constants';
 
 import dynamic from 'next/dynamic';
 import BacktestSummary from '@/components/analysis/BacktestSummary';
+import { optimizeStrategy, OptimizationResult } from '@/lib/engine/optimizer';
 
 const BacktestChart = dynamic(() => import('@/components/analysis/BacktestChart'), { ssr: false });
 
@@ -32,8 +33,13 @@ function BacktestContent() {
     const [results, setResults] = useState<BacktestResult | null>(null);
     const [chartData, setChartData] = useState<Candle[]>([]);
 
-    const handleRunBacktest = async () => {
+    const [isOptimizing, setIsOptimizing] = useState(false);
+    const [optimizationResults, setOptimizationResults] = useState<OptimizationResult[] | null>(null);
+    const [customParams, setCustomParams] = useState<RSIMFIOptions | null>(null);
+
+    const handleRunBacktest = async (overrideParams?: RSIMFIOptions) => {
         setIsLoading(true);
+        setOptimizationResults(null);
         try {
             // Fetch historical data
             const candles = await fetchHistoricalData(symbol, timeframe);
@@ -49,7 +55,8 @@ function BacktestContent() {
             // Run Backtest
             let strategyFn = strategyICT;
             if (strategy === 'RSI_MFI') {
-                strategyFn = strategyRSIMFI;
+                const params = overrideParams || customParams || {};
+                strategyFn = (c) => strategyRSIMFI(c, params);
             }
 
             const res = runBacktest(strategyFn, candles);
@@ -60,6 +67,30 @@ function BacktestContent() {
             alert('Failed to run backtest');
         } finally {
             setIsLoading(false);
+        }
+    };
+
+    const handleOptimize = async () => {
+        setIsOptimizing(true);
+        setOptimizationResults(null);
+        try {
+            const candles = await fetchHistoricalData(symbol, timeframe);
+            if (candles.length < 100) {
+                alert('Insufficient data');
+                setIsOptimizing(false);
+                return;
+            }
+
+            // Yield to allow UI update
+            await new Promise(r => setTimeout(r, 50));
+
+            const results = await optimizeStrategy(candles);
+            setOptimizationResults(results);
+        } catch (e) {
+            console.error("Optimize Error", e);
+            alert('Optimization failed');
+        } finally {
+            setIsOptimizing(false);
         }
     };
 
@@ -139,19 +170,69 @@ function BacktestContent() {
                                 </div>
                             </div>
 
-                            <button
-                                onClick={handleRunBacktest}
-                                disabled={isLoading}
-                                className="w-full py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white font-medium rounded-md flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
-                            >
-                                {isLoading ? (
-                                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                ) : (
-                                    <Play className="w-4 h-4 fill-current" />
-                                )}
-                                Run Backtest
-                            </button>
+                            <div className="grid grid-cols-2 gap-2">
+                                <button
+                                    onClick={() => handleRunBacktest()}
+                                    disabled={isLoading || isOptimizing}
+                                    className="w-full py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white font-medium rounded-md flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
+                                >
+                                    {isLoading ? (
+                                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                    ) : (
+                                        <Play className="w-4 h-4 fill-current" />
+                                    )}
+                                    Run
+                                </button>
+
+                                <button
+                                    onClick={handleOptimize}
+                                    disabled={isLoading || isOptimizing || strategy !== 'RSI_MFI'}
+                                    className={`w-full py-2.5 bg-indigo-500 hover:bg-indigo-600 text-white font-medium rounded-md flex items-center justify-center gap-2 transition-colors disabled:opacity-50 ${strategy !== 'RSI_MFI' ? 'bg-zinc-700 opacity-50 cursor-not-allowed' : ''}`}
+                                    title={strategy !== 'RSI_MFI' ? "Only available for configurable strategies" : "Auto-tune parameters"}
+                                >
+                                    {isOptimizing ? (
+                                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                    ) : (
+                                        <Sparkles className="w-4 h-4 fill-current" />
+                                    )}
+                                    Optimize
+                                </button>
+                            </div>
                         </div>
+
+                        {/* Optimization Results Panel */}
+                        {optimizationResults && optimizationResults.length > 0 && (
+                            <div className="mt-4 pt-4 border-t border-border animate-in slide-in-from-top-2">
+                                <h3 className="text-sm font-semibold mb-3 flex items-center gap-2 text-indigo-400">
+                                    <Sparkles className="w-4 h-4" />
+                                    Best found parameters
+                                </h3>
+                                <div className="space-y-2">
+                                    {optimizationResults.slice(0, 3).map((res, i) => (
+                                        <div key={i} className={`p-3 rounded-lg border flex items-center justify-between text-xs ${i === 0 ? 'bg-indigo-500/10 border-indigo-500/30' : 'bg-muted/30 border-transparent'}`}>
+                                            <div>
+                                                <div className="font-mono font-bold text-foreground">
+                                                    RSI {res.params.rsiPeriod} • OS {res.params.oversold} • OB {res.params.overbought} • {res.params.enableSoftExit ? 'Soft Exit' : 'Hard Exit'}
+                                                </div>
+                                                <div className="text-muted-foreground mt-0.5">
+                                                    Win: <span className={res.result.winRate > 50 ? 'text-emerald-500' : 'text-rose-500'}>{res.result.winRate.toFixed(1)}%</span> • ROI: <span className={res.result.pnl > 0 ? 'text-emerald-500' : 'text-rose-500'}>{((res.result.pnl / 10000) * 100).toFixed(1)}%</span> • Trades: {res.result.totalTrades}
+                                                </div>
+                                            </div>
+                                            <button
+                                                onClick={() => {
+                                                    setCustomParams(res.params);
+                                                    handleRunBacktest(res.params);
+                                                }}
+                                                className="p-1.5 hover:bg-white/10 rounded-md transition-colors text-indigo-400 hover:text-white"
+                                                title="Apply these settings"
+                                            >
+                                                <CheckCircle className="w-4 h-4" />
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     <BacktestSummary

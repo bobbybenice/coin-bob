@@ -5,7 +5,10 @@ import { useMarketData } from '@/lib/hooks/useMarketData';
 import { useNews } from '@/lib/hooks/useNews';
 import { useWhaleData } from '@/lib/hooks/useWhaleData';
 
+import { useRouter } from 'next/navigation';
+
 export default function BobAIAdvisor({ contextOverride }: { contextOverride?: string }) {
+    const router = useRouter();
     const { settings } = useUserStore();
     const { assets, isLoading } = useMarketData();
     const { news, error: newsError } = useNews();
@@ -94,7 +97,7 @@ export default function BobAIAdvisor({ contextOverride }: { contextOverride?: st
 
                 const type = signal?.includes('BULLISH') ? 'LONG' : 'SHORT';
 
-                messages.unshift(`ICT ALERT [${type}]: ${a.symbol} during ${killzoneName} Killzone. Price ${action}. High Probability Setup.`);
+                messages.push(`[ICT ALERT] ${a.symbol} has ${action} during ${killzoneName} Killzone. Potential [${type}] setup.`);
             });
         }
 
@@ -113,18 +116,39 @@ export default function BobAIAdvisor({ contextOverride }: { contextOverride?: st
             <div className="flex-1 p-4 font-mono text-xs md:text-sm leading-relaxed text-muted-foreground bg-background/50 inner-shadow overflow-auto custom-scrollbar">
                 <div className="flex flex-col gap-4">
                     {getInsight().map((msg, index) => (
-                        <div key={index} className="flex gap-3">
-                            <span className="text-indigo-500 select-none shrink-0">root@bob-ai:~#</span>
-                            <div className="typing-effect">
-                                {msg.split(/(\b[A-Z]{2,5}\b)/).map((part, i) => {
-                                    if (i % 2 === 1) { // Matched ticker
-                                        return <span key={i} className="font-bold text-foreground bg-muted px-1 rounded mx-0.5 border border-border">{part}</span>
+                        <div key={index} className="flex gap-3 items-start">
+                            <span className="text-indigo-500 select-none shrink-0 font-bold">~ $</span>
+                            <div className="typing-effect leading-relaxed">
+                                {msg.split(/(\[ICT ALERT\]|\[LONG\]|\[SHORT\]|\b[A-Z]{2,5}\b)/g).map((part, i) => {
+                                    if (part === '[ICT ALERT]') {
+                                        return <span key={i} className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/50 mx-1">ICT ALERT</span>;
                                     }
-                                    return part;
+                                    if (part === '[LONG]') {
+                                        return <span key={i} className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/50 mx-1">LONG</span>;
+                                    }
+                                    if (part === '[SHORT]') {
+                                        return <span key={i} className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-500/20 text-rose-400 border border-rose-500/50 mx-1">SHORT</span>;
+                                    }
+                                    // Symbol detection
+                                    if (/^[A-Z]{2,5}$/.test(part)) {
+                                        const isAsset = assets.some(a => a.symbol === part);
+                                        if (isAsset) {
+                                            return (
+                                                <button
+                                                    key={i}
+                                                    onClick={() => router.push(`/analyze/${part}`)}
+                                                    className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-muted hover:bg-indigo-500/20 hover:text-indigo-300 border border-border hover:border-indigo-500/50 mx-0.5 transition-all cursor-pointer"
+                                                >
+                                                    {part}
+                                                </button>
+                                            );
+                                        }
+                                    }
+                                    return <span key={i}>{part}</span>;
                                 })}
                                 {/* Only show cursor on the last line */}
                                 {index === getInsight().length - 1 && (
-                                    <span className="inline-block w-2 h-4 align-middle bg-indigo-500 ml-1 animate-pulse"></span>
+                                    <span className="inline-block w-1.5 h-3 align-middle bg-indigo-500 ml-1 animate-pulse"></span>
                                 )}
                             </div>
                         </div>

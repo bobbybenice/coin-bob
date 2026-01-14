@@ -26,14 +26,22 @@ function getRSI(closes: number[]): number {
 
 function getMFI(high: number[], low: number[], close: number[], volume: number[]): number {
     if (close.length < 14) return 50;
-    const mfi = MFI.calculate({
-        high,
-        low,
-        close,
-        volume,
-        period: 14
-    });
-    return mfi[mfi.length - 1] || 50;
+    try {
+        const mfi = MFI.calculate({
+            high,
+            low,
+            close,
+            volume,
+            period: 14
+        });
+        const lastValue = mfi[mfi.length - 1];
+
+        // Validation and Clamping
+        if (typeof lastValue !== 'number' || isNaN(lastValue)) return 50;
+        return Math.max(0, Math.min(100, lastValue));
+    } catch (e) {
+        return 50;
+    }
 }
 
 export function useTrendScanner(assets: Asset[]) {
