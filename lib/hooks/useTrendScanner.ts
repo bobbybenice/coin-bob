@@ -39,7 +39,7 @@ function getMFI(high: number[], low: number[], close: number[], volume: number[]
         // Validation and Clamping
         if (typeof lastValue !== 'number' || isNaN(lastValue)) return 50;
         return Math.max(0, Math.min(100, lastValue));
-    } catch (e) {
+    } catch {
         return 50;
     }
 }
@@ -101,8 +101,8 @@ export function useTrendScanner(assets: Asset[]) {
                     updateAssetTrend(asset.symbol, { t4h, t1h, t15m, rsi4h, rsi1h, rsi15m, mfi4h, mfi1h, mfi15m });
                 }
 
-            } catch (e) {
-                console.error("Scanner Error", e);
+            } catch {
+                console.error('Failed to parse scan timestamp');
             } finally {
                 processingRef.current = false;
             }

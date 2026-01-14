@@ -11,6 +11,7 @@ import { LayoutDashboard, Settings2, Zap } from 'lucide-react';
 
 export default function Home() {
   const [mobileTab, setMobileTab] = useState<'market' | 'analysis' | 'intel'>('market');
+  const [isAnalysisOpen, setIsAnalysisOpen] = useState(true);
 
   return (
     <div className="h-screen max-h-screen bg-background font-sans text-foreground selection:bg-emerald-500/30 overflow-hidden flex flex-col">
@@ -23,39 +24,43 @@ export default function Home() {
         <ThemeToggle />
       </div>
 
-      {/* Desktop Toggle (Absolute) */}
-      <div className="hidden lg:block absolute top-6 right-6 z-50">
-        <ThemeToggle />
-      </div>
+
 
       {/* Main Content Area */}
       <div className="flex-1 overflow-hidden relative">
-        {/* DESKTOP LAYOUT (Grid) - Hidden on Mobile */}
-        <div className="hidden lg:grid grid-cols-4 grid-rows-[minmax(0,1fr)_auto] gap-6 p-4 h-full">
+        {/* DESKTOP LAYOUT (Flex) - Hidden on Mobile */}
+        <div className="hidden lg:flex flex-row gap-6 p-4 h-full">
           {/* Main Content Area: Screener */}
-          <main className="col-span-3 row-span-1 h-full overflow-hidden rounded-xl border border-border bg-card">
-            <AssetScreener />
+          <main className="flex-1 flex flex-col gap-6 overflow-hidden min-w-0 transition-all duration-300">
+            <div className="flex-1 rounded-xl border border-border bg-card overflow-hidden relative">
+              <AssetScreener />
+            </div>
+
+            {/* Bottom Area: BobAI Advisor & News & Whale Watcher */}
+            <section className="h-64 grid grid-cols-4 gap-6 shrink-0">
+              <div className="col-span-2 rounded-xl border border-border bg-card overflow-hidden h-full">
+                <BobAIAdvisor />
+              </div>
+              <div className="col-span-1 rounded-xl border border-border bg-card overflow-hidden h-full">
+                <WhaleTracker />
+              </div>
+              <div className="col-span-1 rounded-xl border border-border bg-card overflow-hidden h-full">
+                <NewsFeed />
+              </div>
+            </section>
           </main>
 
           {/* Right Sidebar: Analysis Engine */}
-          <aside className="col-span-1 row-span-2 flex flex-col gap-4 h-full overflow-hidden">
+          <aside
+            className={`${isAnalysisOpen ? 'w-80' : 'w-16'} flex-shrink-0 flex flex-col h-full transition-all duration-300 ease-in-out`}
+          >
             <div className="h-full rounded-xl border border-border bg-card overflow-hidden">
-              <AnalysisEngine />
+              <AnalysisEngine
+                isOpen={isAnalysisOpen}
+                onToggle={() => setIsAnalysisOpen(!isAnalysisOpen)}
+              />
             </div>
           </aside>
-
-          {/* Bottom Area: BobAI Advisor & News & Whale Watcher */}
-          <section className="col-span-3 h-64 grid grid-cols-4 gap-6">
-            <div className="col-span-2 rounded-xl border border-border bg-card overflow-hidden h-full">
-              <BobAIAdvisor />
-            </div>
-            <div className="col-span-1 rounded-xl border border-border bg-card overflow-hidden h-full">
-              <WhaleTracker />
-            </div>
-            <div className="col-span-1 rounded-xl border border-border bg-card overflow-hidden h-full">
-              <NewsFeed />
-            </div>
-          </section>
         </div>
 
         {/* MOBILE LAYOUT (Tabs) - Hidden on Desktop */}

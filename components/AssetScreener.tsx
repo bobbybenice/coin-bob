@@ -2,10 +2,9 @@
 
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { useMarketData } from '@/lib/hooks/useMarketData';
-import { useFearAndGreed } from '@/lib/hooks/useFearAndGreed';
 import { useUserStore } from '@/lib/store';
-import { useAlerts } from '@/lib/hooks/useAlerts';
-import { Search, X, TrendingUp, Activity, Gauge, Play, Bell } from 'lucide-react';
+import { Search, X, TrendingUp, Activity, Play } from 'lucide-react';
+import TimeframeSelector from '@/components/TimeframeSelector';
 
 type SortField = 'price' | 'change24h' | 'rsi' | 'bobScore' | 'symbol' | 'volume24h';
 type SortDirection = 'asc' | 'desc';
@@ -16,37 +15,10 @@ import { useTrendScanner } from '@/lib/hooks/useTrendScanner';
 export default function AssetScreener() {
   const router = useRouter();
   const { settings, toggleFavorite, isLoaded, activeAsset, trends } = useUserStore();
-  const { assets, isLoading, error } = useMarketData();
-  const { data: fngData, isLoading: isFngLoading } = useFearAndGreed();
+  const { assets, isLoading } = useMarketData();
 
-  // Alerts
-  const { requestPermission, triggerAlert, permission } = useAlerts();
-  const [alertsEnabled, setAlertsEnabled] = useState(false);
-
-  // Start Background Scanner
+  // Background Scanner only - Alerts UI moved to Analysis Engine
   useTrendScanner(assets);
-
-  // Monitor for God Mode Signals
-  useEffect(() => {
-    if (!alertsEnabled) return;
-
-    assets.forEach(asset => {
-      const signal = asset.ictAnalysis?.signal;
-      if (signal && signal !== 'NONE') {
-        const trend = trends[asset.symbol];
-        if (trend) {
-          const isBullish = signal.includes('BULLISH');
-          const isBearish = signal.includes('BEARISH');
-          // Alert if 4H trend aligns with signal (High Probability)
-          const aligned = (isBullish && trend.t4h === 'UP') || (isBearish && trend.t4h === 'DOWN');
-
-          if (aligned) {
-            triggerAlert(asset, signal);
-          }
-        }
-      }
-    });
-  }, [assets, alertsEnabled, trends, triggerAlert]);
 
   const [sortField, setSortField] = useState<SortField>('bobScore');
   const [sortDir, setSortDir] = useState<SortDirection>('desc');
@@ -102,7 +74,6 @@ export default function AssetScreener() {
     };
 
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isSearchOpen, searchQuery]);
 
@@ -216,17 +187,8 @@ export default function AssetScreener() {
         </h2>
         <div className="flex items-center gap-6">
           <div className="flex items-center gap-4">
-            <button
-              onClick={() => {
-                if (permission !== 'granted') requestPermission();
-                setAlertsEnabled(!alertsEnabled);
-              }}
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-md transition-all border border-transparent ${alertsEnabled ? 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20' : 'text-muted-foreground hover:bg-muted'}`}
-              title={permission !== 'granted' ? "Enable Notifications" : "Toggle Smart Alerts"}
-            >
-              <Bell className={`w-3.5 h-3.5 ${alertsEnabled ? 'fill-current animate-pulse' : ''}`} />
-              <span className="text-xs font-medium hidden lg:inline">{alertsEnabled ? 'ON' : 'ALERTS'}</span>
-            </button>
+            {/* Timeframe Selector Moved Here */}
+            <TimeframeSelector />
 
             <button
               onClick={() => { setIsSearchOpen(true); }}
@@ -241,44 +203,16 @@ export default function AssetScreener() {
               )}
             </button>
 
-
-
-            {isFngLoading ? (
-              <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-md bg-muted/30 border border-border animate-pulse">
-                <span className="w-16 h-3 bg-muted rounded"></span>
-              </div>
-            ) : error ? (
-              <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-md bg-rose-500/10 border border-rose-500/20" title={error}>
-                <Gauge className="w-3.5 h-3.5 text-rose-500" />
-                <span className="text-xs font-bold text-rose-500">N/A</span>
-              </div>
-            ) : fngData && (
-              <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-md bg-muted/30">
-                <Gauge className="w-3.5 h-3.5 text-muted-foreground" />
-                <span className="text-xs text-muted-foreground">F&G:</span>
-                <span className={`text-xs font-bold ${fngData.value >= 75 ? 'text-blue-500' :
-                  fngData.value >= 50 ? 'text-emerald-500' :
-                    fngData.value >= 25 ? 'text-amber-500' :
-                      'text-rose-500'
-                  }`}>
-                  {fngData.value}
-                </span>
-                <span className="text-[10px] text-muted-foreground uppercase opacity-70">
-                  {fngData.value_classification}
-                </span>
-              </div>
-            )}
-
             <div className="flex items-center gap-3 text-xs font-mono">
               {isLoading ? (
                 <span className="text-amber-500 flex items-center gap-1.5 animate-pulse">
                   <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                  RECALCULATING ({settings.timeframe})
+                  SYNCING
                 </span>
               ) : (
                 <span className="text-emerald-500 flex items-center gap-1.5">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping"></span>
-                  LIVE FEED ({settings.timeframe})
+                  LIVE
                 </span>
               )}
               <span className="w-px h-3 bg-white/10"></span>
@@ -308,7 +242,7 @@ export default function AssetScreener() {
                   Asset <SortIcon field="symbol" />
                 </th>
                 <th
-                  className="py-3 px-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider text-right cursor-pointer hover:text-zinc-300 transition-colors select-none"
+                  className="py-3 px-4 w-[120px] text-xs font-semibold text-zinc-500 uppercase tracking-wider text-right cursor-pointer hover:text-zinc-300 transition-colors select-none"
                   onClick={() => handleSort('price')}
                 >
                   Price <SortIcon field="price" />
@@ -320,7 +254,7 @@ export default function AssetScreener() {
                   24h% <SortIcon field="change24h" />
                 </th>
                 <th
-                  className="py-3 px-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider text-right cursor-pointer hover:text-zinc-300 transition-colors select-none"
+                  className="py-3 px-4 w-[120px] text-xs font-semibold text-zinc-500 uppercase tracking-wider text-right cursor-pointer hover:text-zinc-300 transition-colors select-none"
                   onClick={() => handleSort('volume24h')}
                 >
                   Vol (24h) <SortIcon field="volume24h" />
@@ -380,13 +314,13 @@ export default function AssetScreener() {
 
                       </div>
                     </td>
-                    <td className="py-2.5 px-4 text-right font-mono text-sm text-muted-foreground group-hover:text-foreground transition-colors">
+                    <td className="py-2.5 px-4 w-[120px] text-right font-mono text-sm text-muted-foreground group-hover:text-foreground transition-colors tabular-nums">
                       ${asset.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })}
                     </td>
                     <td className={`py-2.5 px-4 text-right font-mono text-sm font-medium ${asset.change24h >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
                       {asset.change24h > 0 ? '+' : ''}{asset.change24h.toFixed(2)}%
                     </td>
-                    <td className="py-2.5 px-4 text-right font-mono text-sm text-muted-foreground">
+                    <td className="py-2.5 px-4 w-[120px] text-right font-mono text-sm text-muted-foreground tabular-nums">
                       <span className="text-foreground font-medium">{(asset.volume24h / 1000000).toFixed(1)}</span>
                       <span className="text-zinc-600 text-[10px] ml-0.5">M</span>
                     </td>
