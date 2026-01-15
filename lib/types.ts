@@ -30,6 +30,11 @@ export interface Asset {
     marketCap: number;
     rsi: number;
     bobScore: number;
+    // Futures Data
+    isPerpetual?: boolean;
+    fundingRate?: number; // In percentage (e.g. 0.01)
+    openInterest?: number; // In USD
+
     // New Technical Indicators
     ema20?: number;
     ema50?: number;

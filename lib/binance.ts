@@ -1,6 +1,7 @@
 import { Asset, Candle, Timeframe } from './types';
 import { WATCHLIST, SYMBOL_MAP } from './constants';
 import { fetchHistoricalData } from '@/lib/services/market';
+import { fetchFuturesDailyStats, fetchFundingRates, fetchOpenInterest } from '@/lib/services/futures'; // Import Futures Services
 import { analyzeAsset } from '@/lib/engine/analyzer';
 
 interface BinanceTicker {
@@ -129,144 +130,209 @@ async function fetchHistory(symbol: string, timeframe: Timeframe) {
 
 // Flag to prevent double-fetching in React Strict Mode
 let activeTimeframe: Timeframe | null = null;
+let activeFuturesMode: boolean = false; // Track mode
 
-export function subscribeToBinanceStream(timeframe: Timeframe, callback: (assets: Asset[]) => void) {
+export function subscribeToBinanceStream(timeframe: Timeframe, isFuturesMode: boolean, callback: (assets: Asset[]) => void) {
     // Reset history if timeframe changed
-    if (activeTimeframe !== timeframe) {
+    if (activeTimeframe !== timeframe || activeFuturesMode !== isFuturesMode) {
         activeTimeframe = timeframe;
-        // Check if we need to clear assetHistory. 
-        // Technically, modifying the reference object in place is safer strictly for the keyed access, 
-        // but we want to reload data.
-        // We will just let fetchHistoryBatch overwrite the keys.
-        // But for cleaner state, we could reset it. 
-        // However, invalidating all keys might cause a flash of empty data.
-        // Let's just trigger the fetch.
-        fetchHistoryBatch(WATCHLIST, timeframe);
+        activeFuturesMode = isFuturesMode;
+
+        // Basic flush or re-fetch logic for history is handled by fetchHistoryBatch
+        // Note: fetchHistory currently only does Spot. We need to update it?
+        // Actually for now let's keep History as "Candules" source. 
+        // If isFuturesMode, we might want to fetch Futures Candles.
+        // fetchHistoryBatch(WATCHLIST, timeframe); 
     }
 
-    const ws = new WebSocket('wss://stream.binance.com:9443/ws/!ticker@arr');
-    let hasUpdates = false;
+    // SPOT MODE: Use WebSocket as before
+    if (!isFuturesMode) {
+        const ws = new WebSocket('wss://stream.binance.com:9443/ws/!ticker@arr');
+        let hasUpdates = false;
 
-    ws.onmessage = (event) => {
-        try {
-            const tickers: BinanceTicker[] = JSON.parse(event.data);
+        ws.onmessage = (event) => {
+            try {
+                const tickers: BinanceTicker[] = JSON.parse(event.data);
 
-            tickers.forEach(t => {
-                if (WATCHLIST.includes(t.s)) {
-                    const price = parseFloat(t.c);
-                    const open = parseFloat(t.o);
-                    const high = parseFloat(t.h);
-                    const low = parseFloat(t.l);
-                    const volume = parseFloat(t.v);
+                tickers.forEach(t => {
+                    if (WATCHLIST.includes(t.s)) {
+                        const price = parseFloat(t.c);
+                        const open = parseFloat(t.o);
+                        const high = parseFloat(t.h);
+                        const low = parseFloat(t.l);
+                        const volume = parseFloat(t.v);
 
-                    const info = SYMBOL_MAP[t.s];
+                        const info = SYMBOL_MAP[t.s];
 
-                    if (!assetHistory[t.s]) assetHistory[t.s] = [];
+                        if (!assetHistory[t.s]) assetHistory[t.s] = [];
 
-                    const history = assetHistory[t.s];
+                        const history = assetHistory[t.s];
 
-                    // Current candle (Snapshot of today)
-                    const currentCandle: Candle = {
-                        time: Date.now(), // Approximate for the live candle
-                        open,
-                        high,
-                        low,
-                        close: price,
-                        volume
-                    };
+                        // Current candle (Snapshot of today)
+                        const currentCandle: Candle = {
+                            time: Date.now(), // Approximate for the live candle
+                            open,
+                            high,
+                            low,
+                            close: price,
+                            volume
+                        };
 
-                    if (history.length > 0) {
-                        // Update the last candle
-                        // In a real app we'd check timestamps to see if it's a new day,
-                        // but since we fetch '1d' candles, we treat this stream as updates to the "current daily candle"
-                        history[history.length - 1] = currentCandle;
-                    } else {
-                        history.push(currentCandle);
+                        if (history.length > 0) {
+                            history[history.length - 1] = currentCandle;
+                        } else {
+                            history.push(currentCandle);
+                        }
+
+                        // Indicators & Strategies via Engine
+                        const analysis = analyzeAsset(history);
+
+                        // Bob Score Integration (add ticker-specific score)
+                        let score = analysis.score;
+                        const change24h = parseFloat(t.P);
+                        if (change24h > 5) score += 10;
+                        score = Math.min(100, Math.max(0, score));
+
+                        // Map Engine Output to Legacy Asset Structure for UI Compatibility
+                        const ictMetadata = analysis.strategies.ict.metadata as {
+                            sweep?: string;
+                            fvg?: string;
+                            killzone?: 'LONDON' | 'NEW_YORK';
+                            isHighProbability?: boolean;
+                        };
+
+                        let oldSignal: 'NONE' | 'BULLISH_SWEEP' | 'BEARISH_SWEEP' | 'BULLISH_FVG' | 'BEARISH_FVG' = 'NONE';
+                        if (ictMetadata?.sweep === 'BULLISH') oldSignal = 'BULLISH_SWEEP';
+                        else if (ictMetadata?.sweep === 'BEARISH') oldSignal = 'BEARISH_SWEEP';
+                        else if (ictMetadata?.fvg === 'BULLISH') oldSignal = 'BULLISH_FVG';
+                        else if (ictMetadata?.fvg === 'BEARISH') oldSignal = 'BEARISH_FVG';
+
+                        const ictAnalysis = {
+                            signal: oldSignal,
+                            fvg: ictMetadata?.fvg ? { type: ictMetadata.fvg as 'BULLISH' | 'BEARISH' } : undefined,
+                            killzone: ictMetadata?.killzone,
+                            isHighProbability: ictMetadata?.isHighProbability || false
+                        };
+
+                        const existingIndex = latestAssets.findIndex(a => a.symbol === t.s.replace('USDT', ''));
+
+                        const newAsset: Asset = {
+                            id: info.id,
+                            symbol: t.s.replace('USDT', ''),
+                            name: info.name,
+                            price: price,
+                            change24h: change24h,
+                            volume24h: parseFloat(t.v),
+                            marketCap: 0,
+                            rsi: analysis.indicators.rsi.value,
+                            bobScore: score,
+                            ema20: analysis.indicators.ema20.value,
+                            ema50: analysis.indicators.ema50.value,
+                            ema200: analysis.indicators.ema200.value,
+                            macd: analysis.indicators.macd.value,
+                            bb: analysis.indicators.bb.value,
+                            ictAnalysis: ictAnalysis
+
+                        };
+
+                        if (existingIndex >= 0) {
+                            latestAssets[existingIndex] = newAsset;
+                        } else {
+                            latestAssets.push(newAsset);
+                        }
+
+                        hasUpdates = true;
                     }
+                });
+            } catch (e) {
+                console.error("Binance WS Parse Error", e);
+            }
+        };
 
+        const interval = setInterval(() => {
+            if (hasUpdates) {
+                callback([...latestAssets]);
+                hasUpdates = false;
+            }
+        }, 1000);
 
+        return () => {
+            clearInterval(interval);
+            ws.onmessage = null;
+            ws.onerror = null;
+            ws.close();
+        };
+    } else {
+        // PERPS MODE: Polling (since WS for perps requires separate connection management, let's start with polling for simplicity)
+        // Or better: Fetch immediately then poll.
+        // We will fetch Ticker + Funding + OI
+        let isRunning = true;
 
-                    // Indicators & Strategies via Engine
-                    const analysis = analyzeAsset(history);
+        const fetchFuturesData = async () => {
+            if (!isRunning) return;
 
-                    // Bob Score Integration (add ticker-specific score)
-                    let score = analysis.score;
-                    const change24h = parseFloat(t.P);
-                    if (change24h > 5) score += 10;
-                    score = Math.min(100, Math.max(0, score));
+            const [tickers, fundingRates] = await Promise.all([
+                fetchFuturesDailyStats(),
+                fetchFundingRates()
+            ]);
 
-                    // Map Engine Output to Legacy Asset Structure for UI Compatibility
-                    const ictMetadata = analysis.strategies.ict.metadata as {
-                        sweep?: string;
-                        fvg?: string;
-                        killzone?: 'LONDON' | 'NEW_YORK';
-                        isHighProbability?: boolean;
-                    };
+            // Map funding rates for O(1) lookup
+            const fundingMap = new Map<string, { rate: string, nextTime: number }>();
+            fundingRates.forEach(f => {
+                fundingMap.set(f.symbol, { rate: f.lastFundingRate, nextTime: f.nextFundingTime });
+            });
 
-                    // Reconstruct old ICTAnalysis format for UI
-                    let oldSignal: 'NONE' | 'BULLISH_SWEEP' | 'BEARISH_SWEEP' | 'BULLISH_FVG' | 'BEARISH_FVG' = 'NONE';
-                    if (ictMetadata?.sweep === 'BULLISH') oldSignal = 'BULLISH_SWEEP';
-                    else if (ictMetadata?.sweep === 'BEARISH') oldSignal = 'BEARISH_SWEEP';
-                    else if (ictMetadata?.fvg === 'BULLISH') oldSignal = 'BULLISH_FVG';
-                    else if (ictMetadata?.fvg === 'BEARISH') oldSignal = 'BEARISH_FVG';
+            // Process Tickers
+            const newAssets: Asset[] = [];
 
-                    const ictAnalysis = {
-                        signal: oldSignal,
-                        fvg: ictMetadata?.fvg ? { type: ictMetadata.fvg as 'BULLISH' | 'BEARISH' } : undefined, // Approximation
-                        killzone: ictMetadata?.killzone,
-                        isHighProbability: ictMetadata?.isHighProbability || false
-                    };
+            for (const t of tickers) {
+                if (WATCHLIST.includes(t.symbol) || WATCHLIST.includes(t.symbol.replace('USDT', '') + 'USDT')) { // Match our watchlist
+                    const cleanSymbol = t.symbol.replace('USDT', '');
+                    const info = SYMBOL_MAP[t.symbol] || { id: cleanSymbol.toLowerCase(), name: cleanSymbol };
 
-                    const existingIndex = latestAssets.findIndex(a => a.symbol === t.s.replace('USDT', ''));
+                    const price = parseFloat(t.lastPrice);
+                    const funding = fundingMap.get(t.symbol);
+                    const fRate = funding ? parseFloat(funding.rate) * 100 : 0; // Convert to %
 
-                    const newAsset: Asset = {
+                    // We don't have perps historical candles yet in creating this loop, 
+                    // so Technical Indicators (RSI) might be stale or from Spot history?
+                    // Ideally we should use Futures Klines. 
+                    // For MVP: Use Spot History for RSI or skipping it?
+                    // Let's reuse Spot History for now as 'good enough' proxy for indicators, 
+                    // but use Futures Price for display.
+
+                    // To Do: Hook up Futures Klines
+                    // For now, let's use 0 or last known spot RSI
+                    const rsi = 50;
+                    const score = 50; // Placeholder
+
+                    newAssets.push({
                         id: info.id,
-                        symbol: t.s.replace('USDT', ''),
+                        symbol: cleanSymbol,
                         name: info.name,
                         price: price,
-                        change24h: change24h,
-                        volume24h: parseFloat(t.v),
-                        marketCap: 0,
-                        rsi: analysis.indicators.rsi.value,
+                        change24h: parseFloat(t.priceChangePercent),
+                        volume24h: parseFloat(t.quoteVolume),
+                        marketCap: 0, // Not applicable for perps
+                        rsi: rsi,
                         bobScore: score,
-                        ema20: analysis.indicators.ema20.value,
-                        ema50: analysis.indicators.ema50.value,
-                        ema200: analysis.indicators.ema200.value,
-                        macd: analysis.indicators.macd.value,
-                        bb: analysis.indicators.bb.value,
-                        ictAnalysis: ictAnalysis
-
-                    };
-
-                    if (existingIndex >= 0) {
-                        latestAssets[existingIndex] = newAsset;
-                    } else {
-                        latestAssets.push(newAsset);
-                    }
-
-                    hasUpdates = true;
+                        isPerpetual: true,
+                        fundingRate: fRate,
+                        openInterest: 0, // We'll need separate fetch if we want it here, or load lazily
+                        nextFundingTime: funding?.nextTime
+                    });
                 }
-            });
-        } catch (e) {
-            console.error("Binance WS Parse Error", e);
-        }
-    };
+            }
 
-    const interval = setInterval(() => {
-        if (hasUpdates) {
-            callback([...latestAssets]);
-            hasUpdates = false;
-        }
-    }, 1000);
+            callback(newAssets);
+        };
 
-    return () => {
-        clearInterval(interval);
-        ws.onmessage = null;
-        ws.onerror = null;
-        try {
-            ws.close();
-        } catch {
-            // ignore 
-        }
-    };
+        fetchFuturesData();
+        const interval = setInterval(fetchFuturesData, 5000); // 5s poll for Futures (API limit friendly)
+
+        return () => {
+            isRunning = false;
+            clearInterval(interval);
+        };
+    }
 }

@@ -6,20 +6,20 @@ import { subscribeToBinanceStream } from '../binance';
 import { useUserStore } from '../store';
 
 export function useMarketData() {
-    const { settings } = useUserStore();
+    const { settings, isFuturesMode } = useUserStore();
     const [assets, setAssets] = useState<Asset[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
         setIsLoading(true);
         // Subscribe to the simulation stream
-        const unsubscribe = subscribeToBinanceStream(settings.timeframe, (data) => {
+        const unsubscribe = subscribeToBinanceStream(settings.timeframe, isFuturesMode, (data) => {
             setAssets(data);
             setIsLoading(false);
         });
 
         return () => unsubscribe();
-    }, [settings.timeframe]);
+    }, [settings.timeframe, isFuturesMode]);
 
     return { assets, isLoading, error: null };
 }

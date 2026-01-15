@@ -26,6 +26,7 @@ const DEFAULT_SETTINGS: UserSettings = {
     timeframe: '1d',
 };
 
+
 interface UserContextType {
     settings: UserSettings;
     isLoaded: boolean;
@@ -34,6 +35,10 @@ interface UserContextType {
     activeAsset: string | null;
     setActiveAsset: (symbol: string | null) => void;
     setTimeframe: (timeframe: Timeframe) => void;
+
+    // Futures Logic
+    isFuturesMode: boolean;
+    toggleFuturesMode: () => void;
 }
 
 interface TrendsContextType {
@@ -84,6 +89,12 @@ export function UserProvider({ children }: { children: ReactNode }) {
         }));
     };
 
+    const [isFuturesMode, setIsFuturesMode] = useState(false);
+
+    const toggleFuturesMode = () => {
+        setIsFuturesMode(prev => !prev);
+    };
+
     return (
         <UserContext.Provider value={{
             settings,
@@ -92,7 +103,9 @@ export function UserProvider({ children }: { children: ReactNode }) {
             updateFilters,
             activeAsset,
             setActiveAsset,
-            setTimeframe
+            setTimeframe,
+            isFuturesMode,
+            toggleFuturesMode
         }}>
             {children}
         </UserContext.Provider>

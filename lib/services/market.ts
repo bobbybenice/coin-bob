@@ -2,7 +2,29 @@
 'use server';
 import { Candle } from '@/lib/types';
 
-export async function fetchHistoricalData(symbol: string, interval: string = '1d'): Promise<Candle[]> {
+export async function fetchHistoricalData(symbol: string, interval: string = '1d', isFutures: boolean = false): Promise<Candle[]> {
+    if (isFutures) {
+        // Direct Futures Fetch (Single Source for now)
+        const url = `https://fapi.binance.com/fapi/v1/klines?symbol=${symbol}&interval=${interval}&limit=500`;
+        try {
+            const res = await fetch(url, { headers: { 'User-Agent': 'CoinBob/1.0' }, cache: 'no-store' });
+            if (res.ok) {
+                const json = await res.json();
+                return Array.isArray(json) ? json.map((d: any[]) => ({
+                    time: d[0],
+                    open: parseFloat(d[1]),
+                    high: parseFloat(d[2]),
+                    low: parseFloat(d[3]),
+                    close: parseFloat(d[4]),
+                    volume: parseFloat(d[5])
+                })) : [];
+            }
+        } catch (e) {
+            console.error(`Futures fetch failed for ${symbol}`, e);
+            return [];
+        }
+    }
+
     const sources = [
         {
             name: 'Binance Global',
@@ -18,6 +40,7 @@ export async function fetchHistoricalData(symbol: string, interval: string = '1d
                 })) : [];
             }
         },
+        // ... (Coinbase and Binance US remain below)
         {
             name: 'Coinbase Public',
             url: (() => {

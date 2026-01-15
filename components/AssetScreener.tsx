@@ -14,7 +14,7 @@ import { useTrendScanner } from '@/lib/hooks/useTrendScanner';
 
 export default function AssetScreener() {
   const router = useRouter();
-  const { settings, toggleFavorite, isLoaded, activeAsset } = useUserStore();
+  const { settings, toggleFavorite, isLoaded, activeAsset, isFuturesMode, toggleFuturesMode } = useUserStore();
   const { trends } = useTrendsStore();
   const { assets, isLoading } = useMarketData();
 
@@ -191,6 +191,25 @@ export default function AssetScreener() {
             {/* Timeframe Selector Moved Here */}
             <TimeframeSelector />
 
+            <div className="flex items-center bg-muted p-1 rounded-lg border border-border/50 gap-1">
+              <button
+                onClick={() => { if (isFuturesMode) toggleFuturesMode(); }}
+                className={`flex-1 px-3 py-1.5 text-xs font-bold rounded-md transition-all duration-200 ${!isFuturesMode
+                  ? 'bg-background text-foreground shadow-sm ring-1 ring-black/5 dark:ring-white/10'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-background/50'}`}
+              >
+                SPOT
+              </button>
+              <button
+                onClick={() => { if (!isFuturesMode) toggleFuturesMode(); }}
+                className={`flex-1 px-3 py-1.5 text-xs font-bold rounded-md transition-all duration-200 ${isFuturesMode
+                  ? 'bg-emerald-600 text-white shadow-sm ring-1 ring-emerald-500 shadow-emerald-900/20'
+                  : 'text-muted-foreground hover:text-emerald-500 hover:bg-emerald-500/10'}`}
+              >
+                PERPS
+              </button>
+            </div>
+
             <button
               onClick={() => { setIsSearchOpen(true); }}
               className={`flex items-center gap-2 px-3 py-1.5 rounded-md bg-muted/50 hover:bg-muted transition-all border border-transparent hover:border-border group ${searchQuery ? 'text-foreground font-medium ring-1 ring-emerald-500/20 bg-emerald-500/5' : 'text-muted-foreground hover:text-foreground'}`}
@@ -254,12 +273,23 @@ export default function AssetScreener() {
                 >
                   24h% <SortIcon field="change24h" />
                 </th>
-                <th
-                  className="py-3 px-4 w-[120px] text-xs font-semibold text-zinc-500 uppercase tracking-wider text-right cursor-pointer hover:text-zinc-300 transition-colors select-none"
-                  onClick={() => handleSort('volume24h')}
-                >
-                  Vol (24h) <SortIcon field="volume24h" />
-                </th>
+                {isFuturesMode ? (
+                  <>
+                    <th className="py-3 px-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider text-right">
+                      Funding Rate
+                    </th>
+                    <th className="py-3 px-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider text-right">
+                      Open Interest
+                    </th>
+                  </>
+                ) : (
+                  <th
+                    className="py-3 px-4 w-[120px] text-xs font-semibold text-zinc-500 uppercase tracking-wider text-right cursor-pointer hover:text-zinc-300 transition-colors select-none"
+                    onClick={() => handleSort('volume24h')}
+                  >
+                    Vol (24h) <SortIcon field="volume24h" />
+                  </th>
+                )}
                 <th className="py-3 px-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider text-center">
                   Trend (4H/1H/15m)
                 </th>
@@ -321,10 +351,24 @@ export default function AssetScreener() {
                     <td className={`py-2.5 px-4 text-right font-mono text-sm font-medium ${asset.change24h >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
                       {asset.change24h > 0 ? '+' : ''}{asset.change24h.toFixed(2)}%
                     </td>
-                    <td className="py-2.5 px-4 w-[120px] text-right font-mono text-sm text-muted-foreground tabular-nums">
-                      <span className="text-foreground font-medium">{(asset.volume24h / 1000000).toFixed(1)}</span>
-                      <span className="text-zinc-600 text-[10px] ml-0.5">M</span>
-                    </td>
+
+                    {isFuturesMode ? (
+                      <>
+                        <td className={`py-2.5 px-4 text-right font-mono text-sm font-medium ${(asset.fundingRate || 0) > 0.01 ? 'text-emerald-400' :
+                          (asset.fundingRate || 0) < 0 ? 'text-rose-400' : 'text-muted-foreground'
+                          }`}>
+                          {(asset.fundingRate || 0).toFixed(4)}%
+                        </td>
+                        <td className="py-2.5 px-4 text-right font-mono text-sm text-muted-foreground">
+                          {asset.openInterest ? `$${(asset.openInterest).toLocaleString()}` : '-'}
+                        </td>
+                      </>
+                    ) : (
+                      <td className="py-2.5 px-4 w-[120px] text-right font-mono text-sm text-muted-foreground tabular-nums">
+                        <span className="text-foreground font-medium">{(asset.volume24h / 1000000).toFixed(1)}</span>
+                        <span className="text-zinc-600 text-[10px] ml-0.5">M</span>
+                      </td>
+                    )}
                     <td className="py-2.5 px-4 text-center">
                       <div className="flex items-center justify-center gap-1">
                         {/* 4H */}
