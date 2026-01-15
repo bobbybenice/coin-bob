@@ -17,17 +17,17 @@ interface BinanceTicker {
 const assetHistory: Record<string, Candle[]> = {};
 const latestAssets: Asset[] = [];
 
-// 2. Batch Loader for History (Unused for now, but kept for reference or future massive sync)
-// async function fetchHistoryBatch(symbols: string[], timeframe: Timeframe) {
-//     // Process in chunks of 5 to avoid browser connection limits
-//     const CHUNK_SIZE = 5;
-//     for (let i = 0; i < symbols.length; i += CHUNK_SIZE) {
-//         const chunk = symbols.slice(i, i + CHUNK_SIZE);
-//         await Promise.all(chunk.map(s => fetchHistory(s, timeframe)));
-//         // Add slight delay between chunks
-//         await new Promise(r => setTimeout(r, 200));
-//     }
-// }
+// 2. Batch Loader for History
+async function fetchHistoryBatch(symbols: string[], timeframe: Timeframe) {
+    // Process in chunks of 5 to avoid browser connection limits
+    const CHUNK_SIZE = 5;
+    for (let i = 0; i < symbols.length; i += CHUNK_SIZE) {
+        const chunk = symbols.slice(i, i + CHUNK_SIZE);
+        await Promise.all(chunk.map(s => fetchHistory(s, timeframe)));
+        // Add slight delay between chunks
+        await new Promise(r => setTimeout(r, 200));
+    }
+}
 
 // Helper to safely set item in LS with pruning if quota exceeded
 function safeSetItem(key: string, value: string) {
@@ -138,11 +138,10 @@ export function subscribeToBinanceStream(timeframe: Timeframe, isFuturesMode: bo
         activeTimeframe = timeframe;
         activeFuturesMode = isFuturesMode;
 
-        // Basic flush or re-fetch logic for history is handled by fetchHistoryBatch
-        // Note: fetchHistory currently only does Spot. We need to update it?
+        // fetchHistory currently only does Spot. We need to update it?
         // Actually for now let's keep History as "Candules" source. 
         // If isFuturesMode, we might want to fetch Futures Candles.
-        // fetchHistoryBatch(WATCHLIST, timeframe); 
+        fetchHistoryBatch(WATCHLIST, timeframe);
     }
 
     // SPOT MODE: Use WebSocket as before

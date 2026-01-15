@@ -317,7 +317,8 @@ export default function AssetScreener() {
               {filteredAssets.map((asset) => {
                 const isGolden = asset.ema50 && asset.ema200 && asset.ema50 > asset.ema200;
                 const isUptrend = asset.ema20 && asset.price > asset.ema20;
-                const isMacd = asset.macd && asset.macd.histogram && asset.macd.histogram > 0;
+                const macdVal = asset.macd?.histogram;
+                const isMacd = macdVal && macdVal > 0;
                 // const isBbLow = asset.bb && asset.price < asset.bb.lower;
                 const isActive = activeAsset === asset.symbol;
 
@@ -439,7 +440,7 @@ export default function AssetScreener() {
                         {/* MACD Indicator */}
                         <div className="flex flex-col items-center gap-0.5 group/ind">
                           <span className="text-[8px] text-zinc-600 font-mono group-hover/ind:text-zinc-400">MCD</span>
-                          <div className={`w-2 h-2 rounded-full ${isMacd ? 'bg-emerald-500' : 'bg-rose-800'}`} />
+                          <div className={`w-2 h-2 rounded-full ${(macdVal === undefined || isNaN(macdVal)) ? 'bg-zinc-800' : isMacd ? 'bg-emerald-500' : 'bg-rose-800'}`} />
                         </div>
                         {/* Trend Indicator */}
                         <div className="flex flex-col items-center gap-0.5 group/ind">
@@ -455,9 +456,9 @@ export default function AssetScreener() {
                     </td>
                     <td className="py-2.5 px-4 text-right">
                       <div className="flex justify-end">
-                        <div className={`relative w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ring-1 ring-inset ${asset.bobScore > 80 ? 'bg-emerald-500/10 text-emerald-400 ring-emerald-500/30' :
-                          asset.bobScore > 50 ? 'bg-muted text-muted-foreground ring-border' :
-                            'bg-rose-900/10 text-rose-500 ring-rose-500/20'
+                        <div className={`relative w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ring-1 ring-inset ${asset.bobScore > 60 ? 'bg-emerald-500/10 text-emerald-400 ring-emerald-500/30' :
+                          asset.bobScore < 40 ? 'bg-rose-900/10 text-rose-500 ring-rose-500/20' :
+                            'bg-muted text-muted-foreground ring-border'
                           }`}>
                           {asset.bobScore.toFixed(0)}
                         </div>
