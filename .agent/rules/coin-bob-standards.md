@@ -3,6 +3,7 @@ trigger: always_on
 ---
 
 - Framework: Next.js 15 + Tailwind (Dark Mode).
+- Package manager: pnpm
 - Privacy: LocalStorage only. No server DB.
 - Resilience: All APIs must have Mock Data fallbacks.
 - Documentation: Always update task.md after changes.

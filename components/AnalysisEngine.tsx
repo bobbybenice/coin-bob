@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react';
 import { useUserStore } from '@/lib/store';
 import { useAlerts } from '@/lib/hooks/useAlerts';
 import { useMarketData } from '@/lib/hooks/useMarketData';
-import { ChevronDown, ChevronRight, LucideIcon, PanelRightClose, PanelRightOpen } from 'lucide-react';
+import { useFearAndGreed } from '@/lib/hooks/useFearAndGreed';
+import { ChevronDown, ChevronRight, LucideIcon, PanelRightClose, PanelRightOpen, Frown, Smile, Laugh, Target, Zap, TrendingUp, Landmark, SlidersHorizontal, Brain } from 'lucide-react';
 import { ThemeToggle } from '@/components/theme-toggle';
 
 interface AnalysisEngineProps {
@@ -16,6 +17,7 @@ export default function AnalysisEngine({ isOpen = true, onToggle }: AnalysisEngi
     const { settings, updateFilters, isLoaded, trends } = useUserStore();
     const { assets } = useMarketData();
     const { triggerAlert } = useAlerts();
+    const { data: fngData } = useFearAndGreed();
 
     // Local state for Alerts (migrated from AssetScreener)
     const [alertsEnabled] = useState(false);
@@ -39,14 +41,14 @@ export default function AnalysisEngine({ isOpen = true, onToggle }: AnalysisEngi
         if (!alertsEnabled) return;
 
         assets.forEach(asset => {
+            const assetTrend = trends[asset.symbol];
             const signal = asset.ictAnalysis?.signal;
             if (signal && signal !== 'NONE') {
-                const trend = trends[asset.symbol];
-                if (trend) {
+                if (assetTrend) {
                     const isBullish = signal.includes('BULLISH');
                     const isBearish = signal.includes('BEARISH');
                     // Alert if 4H trend aligns with signal (High Probability)
-                    const aligned = (isBullish && trend.t4h === 'UP') || (isBearish && trend.t4h === 'DOWN');
+                    const aligned = (isBullish && assetTrend.t4h === 'UP') || (isBearish && assetTrend.t4h === 'DOWN');
 
                     if (aligned) {
                         triggerAlert(asset, signal);
@@ -61,11 +63,10 @@ export default function AnalysisEngine({ isOpen = true, onToggle }: AnalysisEngi
     const { filters } = settings;
 
     // Helper for Accordion Header
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const SectionHeader = ({ id, title, icon: Icon, colorClass }: { id: string, title: string, icon: LucideIcon, colorClass: string }) => (
         <button
             onClick={() => toggleSection(id)}
-            className="flex items-center justify-between w-full p-3 bg-muted/20 hover:bg-muted/40 transition-colors rounded-lg group"
+            className="flex items-center justify-between w-full p-2 bg-muted/20 hover:bg-muted/40 transition-colors rounded-lg group"
         >
             <div className="flex items-center gap-2.5">
                 <Icon className={`w-4 h-4 ${colorClass}`} />
@@ -110,166 +111,236 @@ export default function AnalysisEngine({ isOpen = true, onToggle }: AnalysisEngi
 
                 </div>
 
+
+
+                {/* Fear & Greed Indicator (Expanded) */}
+                {isOpen && fngData && (
+                    <div className="w-full bg-background/50 border border-border rounded-lg p-2.5 flex items-center justify-between">
+                        <div className="flex flex-col">
+                            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Market Sentiment</span>
+                            <span className={`text-xs font-bold ${Number(fngData.value) > 50 ? 'text-emerald-500' : 'text-rose-500'}`}>
+                                {fngData.value_classification}
+                            </span>
+                        </div>
+                        <div className={`flex items-center justify-center w-8 h-8 rounded-full bg-muted/30 border border-border font-mono text-sm font-bold ${Number(fngData.value) > 50 ? 'text-emerald-500' : 'text-rose-500'}`}>
+                            {fngData.value}
+                        </div>
+                    </div>
+                )}
+
+                {/* Fear & Greed Indicator (Collapsed) */}
+                {!isOpen && fngData && (
+                    <div className="flex flex-col items-center gap-1 mt-2" title={`Sentiment: ${fngData.value_classification}`}>
+                        {Number(fngData.value) <= 30 ? (
+                            <Frown className="w-5 h-5 text-rose-500" />
+                        ) : Number(fngData.value) <= 60 ? (
+                            <Smile className="w-5 h-5 text-foreground" />
+                        ) : (
+                            <Laugh className="w-5 h-5 text-emerald-500" />
+                        )}
+                        <span className={`text-[10px] font-bold ${Number(fngData.value) > 50 ? 'text-emerald-500' : Number(fngData.value) <= 30 ? 'text-rose-500' : 'text-foreground'}`}>
+                            {fngData.value}
+                        </span>
+                    </div>
+                )}
             </div>
 
             {/* Main Content - Always mounted for smooth transitions, controlled by opacity/visibility */}
-            <div className={`flex-1 p-5 space-y-8 overflow-y-auto custom-scrollbar transition-opacity duration-300 ease-in-out ${isOpen ? 'opacity-100 delay-100' : 'opacity-0 pointer-events-none'}`}>
+            <div className={`flex-1 p-5 space-y-2 overflow-y-auto custom-scrollbar transition-opacity duration-300 ease-in-out ${isOpen ? 'opacity-100 delay-100' : 'opacity-0 pointer-events-none'}`}>
                 {/* Fixed width container to prevent reflow during squashing */}
-                <div className="min-w-[280px]">
-                    {/* Watchlist Filter */}
-                    <div className="space-y-3">
-                        <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest pl-1">Targeting</h3>
-                        <label className="flex items-center justify-between group cursor-pointer p-2.5 rounded-lg bg-muted/30 border border-border hover:border-border hover:bg-muted/50 transition-all">
-                            <span className="text-foreground font-medium text-sm">Favorites Only</span>
-                            <div className="relative flex items-center">
-                                <input
-                                    type="checkbox"
-                                    checked={filters.favoritesOnly}
-                                    onChange={(e) => updateFilters({ favoritesOnly: e.target.checked })}
-                                    className="peer appearance-none w-5 h-5 rounded border border-input bg-background checked:bg-emerald-500 checked:border-emerald-500 transition-colors cursor-pointer"
-                                />
-                                <svg className="absolute w-3.5 h-3.5 text-foreground pointer-events-none opacity-0 peer-checked:opacity-100 left-0.5 top-0.5" viewBox="0 0 14 14" fill="none">
-                                    <path d="M3 7L6 10L11 3" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                </svg>
+                <div className="min-w-[280px] space-y-4">
+
+                    {/* Targeting Section */}
+                    <div className="space-y-0.5">
+                        <SectionHeader id="targeting" title="Targeting" icon={Target} colorClass="text-foreground" />
+                        <div className={`grid transition-[grid-template-rows] duration-300 ease-out ${openSections.targeting ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}>
+                            <div className="overflow-hidden">
+                                <div className="pl-2 pr-1 pt-0.5 space-y-0.5">
+                                    <label className="flex items-center justify-between group cursor-pointer py-1 px-2 rounded hover:bg-muted/50 transition-all">
+                                        <span className="text-foreground font-medium text-xs">Favorites Only</span>
+                                        <div className="relative flex items-center">
+                                            <input
+                                                type="checkbox"
+                                                checked={filters.favoritesOnly}
+                                                onChange={(e) => updateFilters({ favoritesOnly: e.target.checked })}
+                                                className="peer appearance-none w-3.5 h-3.5 rounded border border-input bg-background checked:bg-emerald-500 checked:border-emerald-500 transition-colors cursor-pointer"
+                                            />
+                                            <svg className="absolute w-3 h-3 text-foreground pointer-events-none opacity-0 peer-checked:opacity-100 left-0 top-0.5" viewBox="0 0 14 14" fill="none">
+                                                <path d="M3 7L6 10L11 3" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                            </svg>
+                                        </div>
+                                    </label>
+                                </div>
                             </div>
-                        </label>
-                    </div>
-
-                    {/* Automated Strategies */}
-                    <div className="space-y-3">
-                        <h3 className="text-[10px] font-bold text-emerald-500/80 uppercase tracking-widest pl-1">Entry Signals</h3>
-
-                        {[
-                            { label: 'Oversold (RSI < 30)', sub: 'Dip Buy Opportunity', key: 'oversold', color: 'indigo' },
-                            { label: 'Bollinger Low', sub: 'Price < Lower Band', key: 'bbLow', color: 'blue' },
-                            { label: 'MACD Bullish', sub: 'Momentum Positive', key: 'macdBullish', color: 'lime' },
-                        ].map((item) => (
-                            <label key={item.key} className="flex items-center justify-between group cursor-pointer p-2.5 rounded-lg bg-muted/30 border border-border hover:border-border hover:bg-muted/50 transition-all">
-                                <div>
-                                    <span className="text-foreground font-medium text-sm block">{item.label}</span>
-                                    <span className="text-[10px] text-muted-foreground font-medium">{item.sub}</span>
-                                </div>
-                                <div className="relative flex items-center">
-                                    <input
-                                        type="checkbox"
-                                        // @ts-expect-error - Filters object is dynamic
-                                        checked={filters[item.key]}
-                                        onChange={(e) => updateFilters({ [item.key]: e.target.checked })}
-                                        className={`peer appearance-none w-5 h-5 rounded border border-input bg-background checked:bg-${item.color}-500 checked:border-${item.color}-500 transition-colors cursor-pointer`}
-                                    />
-                                    <svg className="absolute w-3.5 h-3.5 text-foreground pointer-events-none opacity-0 peer-checked:opacity-100 left-0.5 top-0.5" viewBox="0 0 14 14" fill="none">
-                                        <path d="M3 7L6 10L11 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                    </svg>
-                                </div>
-                            </label>
-                        ))}
-                    </div>
-
-                    <div className="space-y-3">
-                        <h3 className="text-[10px] font-bold text-amber-500/80 uppercase tracking-widest pl-1">Trend Confirmation</h3>
-                        {[
-                            { label: 'Golden Cross', sub: 'EMA 50 > EMA 200', key: 'goldenCross', color: 'amber' },
-                            { label: 'Uptrend', sub: 'Price > EMA 20', key: 'aboveEma20', color: 'teal' },
-                        ].map((item) => (
-                            <label key={item.key} className="flex items-center justify-between group cursor-pointer p-2.5 rounded-lg bg-muted/30 border border-border hover:border-border hover:bg-muted/50 transition-all">
-                                <div>
-                                    <span className="text-foreground font-medium text-sm block">{item.label}</span>
-                                    <span className="text-[10px] text-muted-foreground font-medium">{item.sub}</span>
-                                </div>
-                                <div className="relative flex items-center">
-                                    <input
-                                        type="checkbox"
-                                        // @ts-expect-error - Filters object is dynamic
-                                        checked={filters[item.key]}
-                                        onChange={(e) => updateFilters({ [item.key]: e.target.checked })}
-                                        className={`peer appearance-none w-5 h-5 rounded border border-input bg-background checked:bg-${item.color}-500 checked:border-${item.color}-500 transition-colors cursor-pointer`}
-                                    />
-                                    <svg className="absolute w-3.5 h-3.5 text-foreground pointer-events-none opacity-0 peer-checked:opacity-100 left-0.5 top-0.5" viewBox="0 0 14 14" fill="none">
-                                        <path d="M3 7L6 10L11 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                    </svg>
-                                </div>
-                            </label>
-                        ))}
-                    </div>
-
-                    <div className="space-y-3">
-                        <h3 className="text-[10px] font-bold text-violet-500/80 uppercase tracking-widest pl-1">ICT Smart Money</h3>
-                        {[
-                            { label: 'Bullish Sweep', sub: 'Liquidity Grab (Long)', key: 'ictBullishSweep', color: 'emerald' },
-                            { label: 'Bearish Sweep', sub: 'Liquidity Grab (Short)', key: 'ictBearishSweep', color: 'rose' },
-                            { label: 'Bullish FVG', sub: 'Fair Value Gap (Long)', key: 'ictBullishFVG', color: 'emerald' },
-                            { label: 'Bearish FVG', sub: 'Fair Value Gap (Short)', key: 'ictBearishFVG', color: 'rose' },
-                        ].map((item) => (
-                            <label key={item.key} className="flex items-center justify-between group cursor-pointer p-2.5 rounded-lg bg-muted/30 border border-border hover:border-border hover:bg-muted/50 transition-all">
-                                <div>
-                                    <span className="text-foreground font-medium text-sm block">{item.label}</span>
-                                    <span className="text-[10px] text-muted-foreground font-medium">{item.sub}</span>
-                                </div>
-                                <div className="relative flex items-center">
-                                    <input
-                                        type="checkbox"
-                                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                                        checked={(filters as any)[item.key]}
-                                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                                        onChange={(e) => updateFilters({ [item.key]: e.target.checked } as any)}
-                                        className={`peer appearance-none w-5 h-5 rounded border border-input bg-background checked:bg-${item.color}-500 checked:border-${item.color}-500 transition-colors cursor-pointer`}
-                                    />
-                                    <svg className="absolute w-3.5 h-3.5 text-foreground pointer-events-none opacity-0 peer-checked:opacity-100 left-0.5 top-0.5" viewBox="0 0 14 14" fill="none">
-                                        <path d="M3 7L6 10L11 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                    </svg>
-                                </div>
-                            </label>
-                        ))}
-                    </div>
-
-                    {/* Technical Filters */}
-                    <div className="space-y-4">
-                        <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest pl-1">Manual Tuning</h3>
-
-                        <div className="space-y-3 bg-muted/20 p-3 rounded-lg border border-border">
-                            <div className="flex justify-between text-xs font-medium">
-                                <span className="text-muted-foreground">RSI Range</span>
-                                <span className="text-emerald-400 font-mono">{filters.minRsi} - {filters.maxRsi}</span>
-                            </div>
-                            <input
-                                type="range"
-                                min="0"
-                                max="100"
-                                value={filters.minRsi ?? 0}
-                                onChange={(e) => updateFilters({ minRsi: parseInt(e.target.value) })}
-                                className="w-full accent-emerald-500 h-1.5 bg-zinc-300 dark:bg-zinc-800 rounded-lg appearance-none cursor-pointer"
-                            />
-                            <input
-                                type="range"
-                                min="0"
-                                max="100"
-                                value={filters.maxRsi ?? 100}
-                                onChange={(e) => updateFilters({ maxRsi: parseInt(e.target.value) })}
-                                className="w-full accent-emerald-500 h-1.5 bg-zinc-300 dark:bg-zinc-800 rounded-lg appearance-none cursor-pointer"
-                            />
                         </div>
                     </div>
 
-                    {/* Proprietary Scores */}
+                    {/* Entry Signals */}
+                    <div className="space-y-0.5">
+                        <SectionHeader id="signals" title="Entry Signals" icon={Zap} colorClass="text-emerald-500" />
+                        <div className={`grid transition-[grid-template-rows] duration-300 ease-out ${openSections.signals ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}>
+                            <div className="overflow-hidden">
+                                <div className="pl-2 pr-1 pt-0.5 space-y-0.5">
+                                    {[
+                                        { label: 'Oversold', sub: 'RSI < 30', key: 'oversold', color: 'indigo' },
+                                        { label: 'Bollinger Low', sub: 'Price < Lower', key: 'bbLow', color: 'blue' },
+                                        { label: 'MACD Bullish', sub: 'Momentum +', key: 'macdBullish', color: 'lime' },
+                                    ].map((item) => (
+                                        <label key={item.key} className="flex items-center justify-between group cursor-pointer py-1 px-2 rounded hover:bg-muted/50 transition-all">
+                                            <div className="flex flex-col">
+                                                <span className="text-foreground font-medium text-xs">{item.label}</span>
+                                                <span className="text-[10px] text-muted-foreground leading-tight">{item.sub}</span>
+                                            </div>
+                                            <div className="relative flex items-center">
+                                                <input
+                                                    type="checkbox"
+                                                    // @ts-expect-error - Filters object is dynamic
+                                                    checked={filters[item.key]}
+                                                    onChange={(e) => updateFilters({ [item.key]: e.target.checked })}
+                                                    className={`peer appearance-none w-3.5 h-3.5 rounded border border-input bg-background checked:bg-${item.color}-500 checked:border-${item.color}-500 transition-colors cursor-pointer`}
+                                                />
+                                                <svg className="absolute w-3 h-3 text-foreground pointer-events-none opacity-0 peer-checked:opacity-100 left-0 top-0.5" viewBox="0 0 14 14" fill="none">
+                                                    <path d="M3 7L6 10L11 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                                </svg>
+                                            </div>
+                                        </label>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Trend Confirmation */}
+                    <div className="space-y-0.5">
+                        <SectionHeader id="trend" title="Trend" icon={TrendingUp} colorClass="text-amber-500" />
+                        <div className={`grid transition-[grid-template-rows] duration-300 ease-out ${openSections.trend ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}>
+                            <div className="overflow-hidden">
+                                <div className="pl-2 pr-1 pt-0.5 space-y-0.5">
+                                    {[
+                                        { label: 'Golden Cross', sub: '50 > 200 EMA', key: 'goldenCross', color: 'amber' },
+                                        { label: 'Uptrend', sub: 'Price > 20 EMA', key: 'aboveEma20', color: 'teal' },
+                                    ].map((item) => (
+                                        <label key={item.key} className="flex items-center justify-between group cursor-pointer py-1 px-2 rounded hover:bg-muted/50 transition-all">
+                                            <div className="flex flex-col">
+                                                <span className="text-foreground font-medium text-xs">{item.label}</span>
+                                                <span className="text-[10px] text-muted-foreground leading-tight">{item.sub}</span>
+                                            </div>
+                                            <div className="relative flex items-center">
+                                                <input
+                                                    type="checkbox"
+                                                    // @ts-expect-error - Filters object is dynamic
+                                                    checked={filters[item.key]}
+                                                    onChange={(e) => updateFilters({ [item.key]: e.target.checked })}
+                                                    className={`peer appearance-none w-3.5 h-3.5 rounded border border-input bg-background checked:bg-${item.color}-500 checked:border-${item.color}-500 transition-colors cursor-pointer`}
+                                                />
+                                                <svg className="absolute w-3 h-3 text-foreground pointer-events-none opacity-0 peer-checked:opacity-100 left-0 top-0.5" viewBox="0 0 14 14" fill="none">
+                                                    <path d="M3 7L6 10L11 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                                </svg>
+                                            </div>
+                                        </label>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* ICT Smart Money */}
+                    <div className="space-y-0.5">
+                        <SectionHeader id="ict" title="ICT Smart Money" icon={Landmark} colorClass="text-violet-500" />
+                        <div className={`grid transition-[grid-template-rows] duration-300 ease-out ${openSections.ict ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}>
+                            <div className="overflow-hidden">
+                                <div className="pl-2 pr-1 pt-0.5 space-y-0.5">
+                                    {[
+                                        { label: 'Bullish Sweep', sub: 'Liquidity Grab', key: 'ictBullishSweep', color: 'emerald' },
+                                        { label: 'Bearish Sweep', sub: 'Liquidity Grab', key: 'ictBearishSweep', color: 'rose' },
+                                        { label: 'Bullish FVG', sub: 'Fair Value Gap', key: 'ictBullishFVG', color: 'emerald' },
+                                        { label: 'Bearish FVG', sub: 'Fair Value Gap', key: 'ictBearishFVG', color: 'rose' },
+                                    ].map((item) => (
+                                        <label key={item.key} className="flex items-center justify-between group cursor-pointer py-1 px-2 rounded hover:bg-muted/50 transition-all">
+                                            <div className="flex flex-col">
+                                                <span className="text-foreground font-medium text-xs">{item.label}</span>
+                                                <span className="text-[10px] text-muted-foreground leading-tight">{item.sub}</span>
+                                            </div>
+                                            <div className="relative flex items-center">
+                                                <input
+                                                    type="checkbox"
+                                                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                                                    checked={(filters as any)[item.key]}
+                                                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                                                    onChange={(e) => updateFilters({ [item.key]: e.target.checked } as any)}
+                                                    className={`peer appearance-none w-3.5 h-3.5 rounded border border-input bg-background checked:bg-${item.color}-500 checked:border-${item.color}-500 transition-colors cursor-pointer`}
+                                                />
+                                                <svg className="absolute w-3 h-3 text-foreground pointer-events-none opacity-0 peer-checked:opacity-100 left-0 top-0.5" viewBox="0 0 14 14" fill="none">
+                                                    <path d="M3 7L6 10L11 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                                </svg>
+                                            </div>
+                                        </label>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Manual Tuning */}
+                    <div className="space-y-0.5">
+                        <SectionHeader id="manual" title="Manual Tuning" icon={SlidersHorizontal} colorClass="text-muted-foreground" />
+                        <div className={`grid transition-[grid-template-rows] duration-300 ease-out ${openSections.manual ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}>
+                            <div className="overflow-hidden">
+                                <div className="pl-2 pr-1 pt-1 pb-1 space-y-2">
+                                    <div className="space-y-1 px-2">
+                                        <div className="flex justify-between text-[10px] font-medium">
+                                            <span className="text-muted-foreground">RSI Range</span>
+                                            <span className="text-emerald-400 font-mono">{filters.minRsi} - {filters.maxRsi}</span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <input
+                                                type="range"
+                                                min="0"
+                                                max="100"
+                                                value={filters.minRsi ?? 0}
+                                                onChange={(e) => updateFilters({ minRsi: parseInt(e.target.value) })}
+                                                className="w-full accent-emerald-500 h-1 bg-zinc-300 dark:bg-zinc-800 rounded-lg appearance-none cursor-pointer"
+                                            />
+                                            <input
+                                                type="range"
+                                                min="0"
+                                                max="100"
+                                                value={filters.maxRsi ?? 100}
+                                                onChange={(e) => updateFilters({ maxRsi: parseInt(e.target.value) })}
+                                                className="w-full accent-emerald-500 h-1 bg-zinc-300 dark:bg-zinc-800 rounded-lg appearance-none cursor-pointer"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     {/* Bob's Intelligence */}
-                    <div className="space-y-4">
-                        <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest pl-1">Bob&apos;s Intelligence</h3>
-
-                        <div className="space-y-3 bg-muted/20 p-3 rounded-lg border border-border">
-                            <div className="flex justify-between text-xs font-medium">
-                                <span className="text-muted-foreground">Min Bob Score</span>
-                                <span className="text-emerald-400 font-mono">{filters.minBobScore}</span>
+                    <div className="space-y-0.5">
+                        <SectionHeader id="ai" title="Bob's Intelligence" icon={Brain} colorClass="text-emerald-500" />
+                        <div className={`grid transition-[grid-template-rows] duration-300 ease-out ${openSections.ai ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}>
+                            <div className="overflow-hidden">
+                                <div className="pl-2 pr-1 pt-1 pb-1 space-y-2">
+                                    <div className="space-y-1 px-2">
+                                        <div className="flex justify-between text-[10px] font-medium">
+                                            <span className="text-muted-foreground">Min Bob Score</span>
+                                            <span className="text-emerald-400 font-mono">{filters.minBobScore}</span>
+                                        </div>
+                                        <input
+                                            type="range"
+                                            min="0"
+                                            max="100"
+                                            value={filters.minBobScore ?? 0}
+                                            onChange={(e) => updateFilters({ minBobScore: parseInt(e.target.value) })}
+                                            className="w-full accent-emerald-500 h-1 bg-zinc-300 dark:bg-zinc-800 rounded-lg appearance-none cursor-pointer"
+                                        />
+                                    </div>
+                                </div>
                             </div>
-                            <input
-                                type="range"
-                                min="0"
-                                max="100"
-                                value={filters.minBobScore ?? 0}
-                                onChange={(e) => updateFilters({ minBobScore: parseInt(e.target.value) })}
-                                className="w-full accent-emerald-500 h-1.5 bg-zinc-300 dark:bg-zinc-800 rounded-lg appearance-none cursor-pointer"
-                            />
                         </div>
                     </div>
+
                 </div>
             </div>
 
@@ -296,6 +367,6 @@ export default function AnalysisEngine({ isOpen = true, onToggle }: AnalysisEngi
                     Reset System
                 </button>
             </div>
-        </div>
+        </div >
     );
 }

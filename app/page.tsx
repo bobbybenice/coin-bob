@@ -11,7 +11,7 @@ import { LayoutDashboard, Settings2, Zap } from 'lucide-react';
 
 export default function Home() {
   const [mobileTab, setMobileTab] = useState<'market' | 'analysis' | 'intel'>('market');
-  const [isAnalysisOpen, setIsAnalysisOpen] = useState(true);
+  const [isAnalysisOpen, setIsAnalysisOpen] = useState(false);
 
   return (
     <div className="h-screen max-h-screen bg-background font-sans text-foreground selection:bg-emerald-500/30 overflow-hidden flex flex-col">
