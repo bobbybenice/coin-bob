@@ -3,8 +3,8 @@
 import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
 import { UserSettings, FilterCriteria, Timeframe, AssetTrends } from './types';
 
-const STORAGE_KEY = 'coinbob_user_settings';
-const TREND_CACHE_KEY = 'coinbob_trend_cache_v2';
+const SETTINGS_CACHE_KEY = 'coinbob_user_settings_v1';
+const TREND_CACHE_KEY = 'coinbob_trend_cache_v3';
 
 const DEFAULT_SETTINGS: UserSettings = {
     favorites: [],
@@ -49,29 +49,15 @@ export function UserProvider({ children }: { children: ReactNode }) {
     const [isLoaded, setIsLoaded] = useState(false);
     const [activeAsset, setActiveAsset] = useState<string | null>(null);
 
-    // Load settings
+    // MARK: - Hydration Check
     useEffect(() => {
-        try {
-            const stored = localStorage.getItem(STORAGE_KEY);
-            if (stored) {
-                const parsed = JSON.parse(stored);
-                setSettings({
-                    ...DEFAULT_SETTINGS,
-                    ...parsed,
-                    filters: { ...DEFAULT_SETTINGS.filters, ...parsed.filters }
-                });
-            }
-        } catch (e) {
-            console.error('Failed to load user settings', e);
-        } finally {
-            setIsLoaded(true);
-        }
+        setIsLoaded(true);
     }, []);
 
-    // Save settings
+    // Save to LocalStorage on change
     useEffect(() => {
         if (isLoaded) {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+            localStorage.setItem(SETTINGS_CACHE_KEY, JSON.stringify(settings));
         }
     }, [settings, isLoaded]);
 
