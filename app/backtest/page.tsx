@@ -36,6 +36,7 @@ function BacktestContent() {
     const [isOptimizing, setIsOptimizing] = useState(false);
     const [optimizationResults, setOptimizationResults] = useState<OptimizationResult[] | null>(null);
     const [customParams, setCustomParams] = useState<RSIMFIOptions | null>(null);
+    const [enableSoftExit, setEnableSoftExit] = useState(false);
 
     const handleRunBacktest = async (overrideParams?: RSIMFIOptions) => {
         setIsLoading(true);
@@ -55,7 +56,7 @@ function BacktestContent() {
             // Run Backtest
             let strategyFn = strategyICT;
             if (strategy === 'RSI_MFI') {
-                const params = overrideParams || customParams || {};
+                const params = overrideParams || { ...customParams, enableSoftExit };
                 strategyFn = (c) => strategyRSIMFI(c, params);
             }
 
@@ -168,6 +169,24 @@ function BacktestContent() {
                                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
                                     </div>
                                 </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-muted-foreground mb-1">Exit Mode</label>
+                                    <div className="relative">
+                                        <select
+                                            value={enableSoftExit ? 'SOFT' : 'HARD'}
+                                            onChange={(e) => setEnableSoftExit(e.target.value === 'SOFT')}
+                                            disabled={strategy !== 'RSI_MFI'}
+                                            className={`w-full bg-background border border-border rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-emerald-500 outline-none appearance-none ${strategy !== 'RSI_MFI' ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                        >
+                                            <option value="HARD">Hard Targets Only (SL/TP)</option>
+                                            <option value="SOFT">Allow Soft Exits (Strategy)</option>
+                                        </select>
+                                        <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none text-muted-foreground">
+                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
 
                             <div className="grid grid-cols-2 gap-2">
@@ -221,6 +240,7 @@ function BacktestContent() {
                                             <button
                                                 onClick={() => {
                                                     setCustomParams(res.params);
+                                                    setEnableSoftExit(res.params.enableSoftExit || false);
                                                     handleRunBacktest(res.params);
                                                 }}
                                                 className="p-1.5 hover:bg-white/10 rounded-md transition-colors text-indigo-400 hover:text-white"
