@@ -1,8 +1,8 @@
 "use client";
 
-import { useUserStore } from "@/lib/store";
+import { useUserStore, useTrendsStore } from "@/lib/store";
 
-import React, { use, useState, useEffect } from "react";
+import React, { use, useState, useEffect, useRef } from "react";
 import { StrategyProvider, useStrategy, AnalysisState } from "@/components/analysis/StrategyProvider";
 import TradingViewChart from "@/components/analysis/TradingViewChart";
 import { StrategyPanel } from "@/components/analysis/StrategyPanel";
@@ -89,6 +89,7 @@ function AnalysisPageContent({ params }: { params: Promise<{ symbol: string }> }
     const router = useRouter();
     const { setAnalysisState, strategyName, setStrategyName } = useStrategy();
     const { settings, isLoaded } = useUserStore();
+    const { trends } = useTrendsStore();
 
     // Normalise symbol for API & Chart compatibility (e.g. BTC -> BTCUSDT)
     const pairSymbol = symbol.toUpperCase().endsWith("USDT")
@@ -102,11 +103,16 @@ function AnalysisPageContent({ params }: { params: Promise<{ symbol: string }> }
     const [strategyHistory, setStrategyHistory] = useState<Candle[]>([]);
     const [strategySignals, setStrategySignals] = useState<Signal[]>([]);
 
-    // Sync Anchor TF with Global Settings
+    // Sync Anchor TF with Global Settings ONLY once
+    const initialSyncDone = useRef(false);
+
     useEffect(() => {
-        if (isLoaded && settings.timeframe) {
+        if (isLoaded && settings.timeframe && !initialSyncDone.current) {
             const match = TV_INTERVALS.find(t => t.label.toLowerCase() === settings.timeframe.toLowerCase());
-            if (match) setAnchorTf(match.value);
+            if (match) {
+                setAnchorTf(match.value);
+                initialSyncDone.current = true;
+            }
         }
     }, [isLoaded, settings.timeframe]);
 
@@ -144,6 +150,11 @@ function AnalysisPageContent({ params }: { params: Promise<{ symbol: string }> }
                     else if (inds.rsi.value < 45) reason += " Momentum is Weak.";
                     else reason += " Momentum is Neutral.";
 
+                    // Integration with 4H Trend (Resolving Contradictions)
+                    // The 'symbol' param is usually 'SOL' or 'BTC', which matches trends keys.
+                    const trendData = trends[symbol.toUpperCase()];
+                    const t4h = trendData?.t4h || 'NEUTRAL';
+
                     let stateObj: AnalysisState;
                     let biasType = 'NEUTRAL';
 
@@ -152,6 +163,15 @@ function AnalysisPageContent({ params }: { params: Promise<{ symbol: string }> }
                     else if (score >= 60) biasType = 'BULLISH';
                     else if (score <= 20) biasType = 'STRONG_BEARISH';
                     else if (score <= 40) biasType = 'BEARISH';
+
+                    // Check for Contradictions (e.g. Bullish Score vs Bearish 4H Trend)
+                    if ((biasType.includes('BULLISH')) && t4h === 'DOWN') {
+                        biasType = 'MIXED (Pullback)';
+                        reason += ` CAUTION: 1H Technical is Bullish, but 4H Trend is DOWN. This is likely a Pullback Short opportunity.`;
+                    } else if ((biasType.includes('BEARISH')) && t4h === 'UP') {
+                        biasType = 'MIXED (Dip)';
+                        reason += ` CAUTION: 1H Technical is Bearish, but 4H Trend is UP. This is likely a BTD (Buy The Dip) opportunity.`;
+                    }
 
                     if (strategyName === 'ICT') {
                         const ict = strategyICT(history);
@@ -173,6 +193,9 @@ function AnalysisPageContent({ params }: { params: Promise<{ symbol: string }> }
                         if (signalString !== 'NONE') {
                             biasType = signalString.includes('BULLISH') ? 'SCALP_LONG' : 'SCALP_SHORT';
                         }
+
+                        // If alert was for SHORT but we found no signal here (maybe slightly diff time), 
+                        // fallback to the mixed context if contradictory.
 
                         stateObj = {
                             id: `${symbol}-${Date.now()}`,
@@ -233,7 +256,7 @@ function AnalysisPageContent({ params }: { params: Promise<{ symbol: string }> }
         fetchAnalysis();
         const interval = setInterval(fetchAnalysis, 60000);
         return () => clearInterval(interval);
-    }, [pairSymbol, anchorTf, setAnalysisState, symbol, strategyName, viewMode]);
+    }, [pairSymbol, anchorTf, setAnalysisState, symbol, strategyName, viewMode, trends]);
 
     return (
         <div className="flex flex-col h-screen overflow-hidden bg-background text-foreground">
