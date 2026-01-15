@@ -206,12 +206,12 @@ export default function AssetScreener() {
 
             <div className="flex items-center gap-3 text-xs font-mono">
               {isLoading ? (
-                <span className="text-amber-500 flex items-center gap-1.5 animate-pulse">
+                <span className="text-amber-500 flex items-center gap-1.5 animate-pulse w-[80px]">
                   <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
                   SYNCING
                 </span>
               ) : (
-                <span className="text-emerald-500 flex items-center gap-1.5">
+                <span className="text-emerald-500 flex items-center gap-1.5 w-[80px]">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping"></span>
                   LIVE
                 </span>

@@ -4,7 +4,7 @@ import { useState, useEffect, createContext, useContext, ReactNode } from 'react
 import { UserSettings, FilterCriteria, Timeframe, AssetTrends } from './types';
 
 const STORAGE_KEY = 'coinbob_user_settings';
-const TREND_CACHE_KEY = 'coinbob_trend_cache';
+const TREND_CACHE_KEY = 'coinbob_trend_cache_v2';
 
 const DEFAULT_SETTINGS: UserSettings = {
     favorites: [],

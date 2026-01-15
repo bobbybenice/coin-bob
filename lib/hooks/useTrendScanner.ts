@@ -63,10 +63,10 @@ export function useTrendScanner(assets: Asset[]) {
                 const asset = assets[idx];
                 indexRef.current = (indexRef.current + 1) % assets.length;
 
-                // Check cache validity (60 mins)
+                // Check cache validity (15 mins)
                 const cached = trends[asset.symbol];
                 const now = Date.now();
-                if (cached && cached.lastUpdated && (now - cached.lastUpdated < 3600000)) {
+                if (cached && cached.lastUpdated && (now - cached.lastUpdated < 900000)) {
                     processingRef.current = false;
                     return;
                 }
@@ -80,8 +80,8 @@ export function useTrendScanner(assets: Asset[]) {
                     fetchHistoricalData(symbol, '15m')
                 ]);
 
-                // Ensure we have enough data (at least 30 candles)
-                if (h4.length > 30 && h1.length > 30 && m15.length > 30) {
+                // Ensure we have enough data (at least 50 candles for stable RSI/EMA)
+                if (h4.length > 50 && h1.length > 50 && m15.length > 50) {
                     const c4h = h4.map(c => c.close);
                     const c1h = h1.map(c => c.close);
                     const c15m = m15.map(c => c.close);

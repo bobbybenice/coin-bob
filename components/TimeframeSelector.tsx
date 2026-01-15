@@ -14,13 +14,13 @@ export default function TimeframeSelector() {
             <div className="px-2 flex items-center text-muted-foreground">
                 <Clock className="w-3.5 h-3.5" />
             </div>
-            <div className="flex bg-muted/50 rounded-md p-0.5">
+            <div className="flex bg-muted/50 rounded-md p-0.5 gap-0.5">
                 {TIMEFRAMES.map((tf) => (
                     <button
                         key={tf}
                         onClick={() => setTimeframe(tf)}
                         className={`
-                            px-2.5 py-1 text-xs font-bold rounded-sm transition-all
+                            px-2.5 py-1 text-xs font-bold rounded-sm transition-all cursor-pointer hover:bg-zinc-100 dark:hover:bg-zinc-800
                             ${settings.timeframe === tf
                                 ? 'bg-background text-emerald-400 shadow-sm ring-1 ring-border'
                                 : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
