@@ -3,147 +3,158 @@
 import { WATCHLIST, SYMBOL_MAP } from '@/lib/constants';
 import { NewsItem } from '@/lib/types';
 
-interface CryptoPanicPost {
-    id: number;
+interface FreeNewsItem {
     title: string;
-    slug: string; // Used to construct URL
-    domain?: string;
-    published_at: string;
-    currencies?: { code: string; title: string; slug: string; }[];
-    votes: {
-        negative: number;
-        positive: number;
-        important: number;
-        liked: number;
-        disliked: number;
-        lol: number;
-        toxic: number;
-        saved: number;
-        comments: number;
-    };
+    link: string;
+    description?: string;
+    pubDate: string;
+    source: string;
+    sourceKey?: string;
+    category?: string;
+    timeAgo?: string;
+    tickers?: string[]; // API might return this, but we'll simulate/infer if missing
+}
+
+interface NewsResponse {
+    articles: FreeNewsItem[];
 }
 
 export async function fetchCryptoNews(): Promise<NewsItem[]> {
-    const apiKey = process.env.CRYPTOPANIC_API_KEY;
-
-    if (!apiKey) {
-        console.error("Missing CRYPTOPANIC_API_KEY environment variable");
-        throw new Error("News Feed Unavailable: API Key Missing");
-    }
-
     try {
-        // Use developer v2 endpoint as verified
-        const url = `https://cryptopanic.com/api/developer/v2/posts/?auth_token=${apiKey}&public=true`;
+        const url = 'https://free-crypto-news.vercel.app/api/news';
 
         const response = await fetch(url, {
-            next: { revalidate: 900 }, // Cache for 15 minutes
+            next: { revalidate: 300 }, // Cache for 5 minutes
             headers: {
-                'User-Agent': 'CoinBob/1.0 (Node.js)'
+                'User-Agent': 'CoinBob/1.0'
             }
         });
 
-        // Handle Rate Limiting (429) or other Client/Server errors gracefully
         if (!response.ok) {
-            if (response.status === 429) {
-                console.warn(`CryptoPanic Rate Limit Hit (429).`);
-                throw new Error("News Feed Rate Limited. Please try again later.");
-            }
-            throw new Error(`Upstream API Error: ${response.status} ${response.statusText}`);
-        }
-
-        const data = await response.json();
-
-        // Prepare watchlist symbols (remove USDT)
-        const relevantSymbols = new Set(WATCHLIST.map(s => s.replace('USDT', '')));
-
-        if (!data.results) {
+            console.error(`News API Error: ${response.status} ${response.statusText}`);
             return [];
         }
 
-        const news = data.results.filter((item: CryptoPanicPost) => {
-            // New Logic: If no currencies listed, keep it as "General News" (might be broad market)
-            if (!item.currencies) return true;
+        const data: NewsResponse = await response.json();
 
-            // Otherwise, check if it matches our watchlist
-            // But also be lenient if it's "important"
-            const matchesWatchlist = item.currencies.some((c) => relevantSymbols.has(c.code));
-            return matchesWatchlist;
-        }).map((item: CryptoPanicPost) => {
-            const votes = item.votes || {};
-            const pos = votes.positive || 0;
-            const neg = votes.negative || 0;
+        if (!data.articles || !Array.isArray(data.articles)) {
+            return [];
+        }
 
-            let score = (pos - neg) / (pos + neg + 1);
-            let sentiment: 'bullish' | 'bearish' | 'neutral' = 'neutral';
-
-            // If no votes, try simple keyword analysis
-            if (pos === 0 && neg === 0) {
-                const titleLower = item.title.toLowerCase();
-                const bullishTerms = ['soars', 'surges', 'rally', 'bull', 'high', 'gains', 'jump', 'adoption', 'launch', 'record', 'payout', 'upgrade', 'success', 'rockets'];
-                const bearishTerms = ['crash', 'drop', 'bear', 'low', 'loss', 'dump', 'ban', 'risk', 'warns', 'lawsuit', 'hack', 'scam', 'fraud', 'prison', 'sentencing'];
-
-                let bullCount = 0;
-                let bearCount = 0;
-
-                bullishTerms.forEach(term => { if (titleLower.includes(term)) bullCount++; });
-                bearishTerms.forEach(term => { if (titleLower.includes(term)) bearCount++; });
-
-                if (bullCount > bearCount) {
-                    score = 0.5; // Artificial score
-                    sentiment = 'bullish';
-                } else if (bearCount > bullCount) {
-                    score = -0.5;
-                    sentiment = 'bearish';
-                }
-            } else {
-                // Existing logic
-                if (score >= 0.2) sentiment = 'bullish';
-                else if (score <= -0.2) sentiment = 'bearish';
-            }
-
-            // Keyword analysis for Asset Tagging (Fix for empty currencies in API)
-            const inferredCurrencies = [...(item.currencies || [])];
-            if (inferredCurrencies.length === 0) {
-                const titleLower = item.title.toLowerCase();
-                relevantSymbols.forEach(symbol => {
-                    // Look up full name from shared map
-                    const info = SYMBOL_MAP[`${symbol}USDT`];
-                    const fullName = info ? info.name.toLowerCase() : '';
-
-                    // Match Symbol (surrounded by boundary or space to avoid partial matches mostly)
-                    // Also partial match for "XRP" might catch "XRP" at start of string
-                    if (titleLower.includes(` ${symbol.toLowerCase()} `) ||
-                        titleLower.includes(`$${symbol.toLowerCase()}`) ||
-                        titleLower.startsWith(`${symbol.toLowerCase()} `) ||
-                        (fullName && titleLower.includes(fullName))) {
-
-                        inferredCurrencies.push({
-                            code: symbol,
-                            title: info ? info.name : symbol,
-                            slug: info ? info.id : symbol.toLowerCase()
-                        });
-                    }
-                });
-            }
-
-            return {
-                id: item.id,
-                title: item.title,
-                url: `https://cryptopanic.com/news/${item.id}/${item.slug}`,
-                domain: item.domain || 'cryptopanic.com',
-                published_at: item.published_at,
-                currencies: inferredCurrencies,
-                votes: votes as unknown as CryptoPanicPost['votes'], // Cast because we might have mocked an empty object
-                sentiment,
-                score
-            } as NewsItem;
-        });
-
-        return news;
+        return processArticles(data.articles);
 
     } catch (error) {
         console.error("Failed to fetch crypto news:", error);
-        // Return empty array to prevent UI crash, let the UI handle empty state
         return [];
     }
+}
+
+export async function fetchNewsForAsset(symbol: string): Promise<NewsItem[]> {
+    try {
+        // The API supports search
+        const url = `https://free-crypto-news.vercel.app/api/search?q=${encodeURIComponent(symbol)}`;
+
+        const response = await fetch(url, {
+            next: { revalidate: 300 }
+        });
+
+        if (!response.ok) return [];
+
+        const data: NewsResponse = await response.json();
+
+        if (!data.articles || !Array.isArray(data.articles)) {
+            return [];
+        }
+
+        return processArticles(data.articles);
+
+    } catch (error) {
+        console.error(`Failed to fetch news for ${symbol}:`, error);
+        return [];
+    }
+}
+
+function processArticles(articles: FreeNewsItem[]): NewsItem[] {
+    // Prepare watchlist symbols for tagging
+    const relevantSymbols = new Set(WATCHLIST.map(s => s.replace('USDT', '')));
+
+    return articles.map((item, index) => {
+        // Clean URL (remove CDATA if present)
+        let cleanLink = item.link;
+        if (cleanLink.startsWith('<![CDATA[')) {
+            cleanLink = cleanLink.replace('<![CDATA[', '').replace(']]>', '');
+        }
+
+        // Generate a stable-ish ID
+        const id = `news-${index}-${Date.now()}`;
+
+        // Sentiment Analysis (Simple Keyword Based)
+        let sentiment: 'bullish' | 'bearish' | 'neutral' = 'neutral';
+        let score = 0;
+
+        const text = (item.title + ' ' + (item.description || '')).toLowerCase();
+
+        const bullishTerms = ['soars', 'surges', 'rally', 'bull', 'high', 'gains', 'jump', 'adoption', 'launch', 'record', 'payout', 'upgrade', 'success', 'rockets', 'buy', 'invests'];
+        const bearishTerms = ['crash', 'drop', 'bear', 'low', 'loss', 'dump', 'ban', 'risk', 'warns', 'lawsuit', 'hack', 'scam', 'fraud', 'prison', 'sentencing', 'sell'];
+
+        let bullCount = 0;
+        let bearCount = 0;
+
+        bullishTerms.forEach(term => { if (text.includes(term)) bullCount++; });
+        bearishTerms.forEach(term => { if (text.includes(term)) bearCount++; });
+
+        if (bullCount > bearCount) {
+            score = 0.5;
+            sentiment = 'bullish';
+        } else if (bearCount > bullCount) {
+            score = -0.5;
+            sentiment = 'bearish';
+        }
+
+        // Asset Inferences
+        const currencies: { code: string; title: string; slug: string; }[] = [];
+
+        // Check for tickers in title/desc
+        relevantSymbols.forEach(symbol => {
+            const info = SYMBOL_MAP[`${symbol}USDT`];
+            const fullName = info ? info.name.toLowerCase() : '';
+
+            // Boundary checks for symbol to avoid "AT" matching "BAT" etc.
+            // Using regex for word boundaries
+            const symbolRegex = new RegExp(`\\b${symbol}\\b`, 'i');
+
+            if (symbolRegex.test(text) || (fullName && text.includes(fullName))) {
+                currencies.push({
+                    code: symbol,
+                    title: info ? info.name : symbol,
+                    slug: info ? info.id : symbol.toLowerCase()
+                });
+            }
+        });
+
+        // Limit to 3 currencies
+        const uniqueCurrencies = currencies.slice(0, 3);
+
+        return {
+            id,
+            title: item.title,
+            url: cleanLink,
+            domain: item.source || 'CryptoNews',
+            published_at: item.pubDate,
+            currencies: uniqueCurrencies,
+            votes: {
+                negative: 0,
+                positive: 0,
+                important: 0,
+                liked: 0,
+                disliked: 0,
+                lol: 0,
+                toxic: 0,
+                saved: 0,
+                comments: 0
+            },
+            sentiment,
+            score
+        };
+    });
 }

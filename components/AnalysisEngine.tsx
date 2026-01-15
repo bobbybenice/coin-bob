@@ -21,8 +21,8 @@ export default function AnalysisEngine({ isOpen = true, onToggle }: AnalysisEngi
 
     // Accordion State
     const [openSections, setOpenSections] = useState<Record<string, boolean>>({
-        targeting: true,
-        signals: true,
+        targeting: false,
+        signals: false,
         ict: false,
         trend: false,
         manual: false,

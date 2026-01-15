@@ -73,7 +73,7 @@ export interface UserSettings {
 }
 
 export interface NewsItem {
-    id: number;
+    id: string | number;
     title: string;
     url: string;
     domain: string;

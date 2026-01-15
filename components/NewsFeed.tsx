@@ -7,7 +7,8 @@ import { Newspaper } from 'lucide-react';
 
 export default function NewsFeed() {
     const { activeAsset } = useUserStore();
-    const { news, isLoading: loading, error, refresh } = useNews();
+    // Fetch news specific to the active asset if selected, otherwise global news
+    const { news, isLoading: loading, error, refresh } = useNews(activeAsset || undefined);
 
     return (
         <div className="flex flex-col h-full bg-card overflow-hidden relative group">
@@ -73,7 +74,7 @@ export default function NewsFeed() {
                     </div>
                 ) : (
                     <div className="divide-y divide-border">
-                        {news.filter(item => !activeAsset || item.currencies.some(c => c.code === activeAsset)).map((item) => (
+                        {news.map((item) => (
                             <a
                                 key={item.id}
                                 href={item.url}
