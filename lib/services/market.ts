@@ -19,6 +19,39 @@ export async function fetchHistoricalData(symbol: string, interval: string = '1d
             }
         },
         {
+            name: 'Coinbase Public',
+            url: (() => {
+                // Map interval to Coinbase granularity
+                const granularityMap: Record<string, number> = {
+                    '1m': 60,
+                    '5m': 300,
+                    '15m': 900,
+                    '1h': 3600,
+                    '4h': 21600, // 6h closest, or calculate manually. Coinbase supports 1m, 5m, 15m, 1h, 6h, 1d
+                    '1d': 86400
+                };
+
+                // Handle symbol mapping (BCHUSDT -> BCH-USD)
+                // Remove USDT/USDC suffix and append -USD
+                const baseSymbol = symbol.replace(/USDT$|USDC$/, '') + '-USD';
+
+                const granularity = granularityMap[interval] || 900;
+                return `https://api.exchange.coinbase.com/products/${baseSymbol}/candles?granularity=${granularity}`;
+            })(),
+            adapter: (json: any): Candle[] => {
+                // Coinbase: [time, low, high, open, close, volume]
+                // Time is seconds. Order is Newest First.
+                return Array.isArray(json) ? json.map((d: any[]) => ({
+                    time: d[0] * 1000,
+                    low: d[1],
+                    high: d[2],
+                    open: d[3],
+                    close: d[4],
+                    volume: d[5]
+                })).reverse() : []; // Reverse to match Binance (Oldest First)
+            }
+        },
+        {
             name: 'Binance US', // Good for US IP addresses 
             url: `https://api.binance.us/api/v3/klines?symbol=${symbol}&interval=${interval}&limit=500`,
             adapter: (json: any): Candle[] => {
