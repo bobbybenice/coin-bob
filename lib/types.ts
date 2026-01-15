@@ -34,6 +34,7 @@ export interface Asset {
     isPerpetual?: boolean;
     fundingRate?: number; // In percentage (e.g. 0.01)
     openInterest?: number; // In USD
+    nextFundingTime?: number; // Timestamp of next funding
 
     // New Technical Indicators
     ema20?: number;

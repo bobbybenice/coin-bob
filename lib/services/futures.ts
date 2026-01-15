@@ -74,7 +74,7 @@ export async function fetchOpenInterest(symbol: string): Promise<number> {
         // Actually response is { symbol, openInterest, time }
         // We might need to multiply by price to get USD value if needed, but raw is fine.
         return parseFloat(data.openInterest);
-    } catch (e) {
+    } catch {
         return 0;
     }
 }
