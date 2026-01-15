@@ -1,12 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useUserStore } from '@/lib/store';
-import { useAlerts } from '@/lib/hooks/useAlerts';
-import { useMarketData } from '@/lib/hooks/useMarketData';
+// import { useAlerts } from '@/lib/hooks/useAlerts'; // Removed as logic moved to SignalMonitor
+// import { useMarketData } from '@/lib/hooks/useMarketData'; // Removed
 import { useFearAndGreed } from '@/lib/hooks/useFearAndGreed';
 import { ChevronDown, ChevronRight, LucideIcon, PanelRightClose, PanelRightOpen, Frown, Smile, Laugh, Target, Zap, TrendingUp, Landmark, SlidersHorizontal, Brain } from 'lucide-react';
 import { ThemeToggle } from '@/components/theme-toggle';
+import SignalMonitor from './SignalMonitor';
 
 interface AnalysisEngineProps {
     isOpen?: boolean;
@@ -14,13 +15,9 @@ interface AnalysisEngineProps {
 }
 
 export default function AnalysisEngine({ isOpen = true, onToggle }: AnalysisEngineProps) {
-    const { settings, updateFilters, isLoaded, trends } = useUserStore();
-    const { assets } = useMarketData();
-    const { triggerAlert } = useAlerts();
+    const { settings, updateFilters, isLoaded } = useUserStore();
+    // Trends and Assets are no longer needed here for rendering!
     const { data: fngData } = useFearAndGreed();
-
-    // Local state for Alerts (migrated from AssetScreener)
-    const [alertsEnabled] = useState(false);
 
     // Accordion State
     const [openSections, setOpenSections] = useState<Record<string, boolean>>({
@@ -36,28 +33,6 @@ export default function AnalysisEngine({ isOpen = true, onToggle }: AnalysisEngi
         setOpenSections(prev => ({ ...prev, [key]: !prev[key] }));
     };
 
-    // Monitor for God Mode Signals (Migrated from AssetScreener)
-    useEffect(() => {
-        if (!alertsEnabled) return;
-
-        assets.forEach(asset => {
-            const assetTrend = trends[asset.symbol];
-            const signal = asset.ictAnalysis?.signal;
-            if (signal && signal !== 'NONE') {
-                if (assetTrend) {
-                    const isBullish = signal.includes('BULLISH');
-                    const isBearish = signal.includes('BEARISH');
-                    // Alert if 4H trend aligns with signal (High Probability)
-                    const aligned = (isBullish && assetTrend.t4h === 'UP') || (isBearish && assetTrend.t4h === 'DOWN');
-
-                    if (aligned) {
-                        triggerAlert(asset, signal);
-                    }
-                }
-            }
-        });
-    }, [assets, alertsEnabled, trends, triggerAlert]);
-
     if (!isLoaded) return <div className="p-4 text-muted-foreground animate-pulse">Loading...</div>;
 
     const { filters } = settings;
@@ -66,7 +41,7 @@ export default function AnalysisEngine({ isOpen = true, onToggle }: AnalysisEngi
     const SectionHeader = ({ id, title, icon: Icon, colorClass }: { id: string, title: string, icon: LucideIcon, colorClass: string }) => (
         <button
             onClick={() => toggleSection(id)}
-            className="flex items-center justify-between w-full p-2 bg-muted/20 hover:bg-muted/40 transition-colors rounded-lg group"
+            className="flex items-center justify-between w-full p-2 bg-black/20 hover:bg-white/20 transition-colors rounded-lg group cursor-pointer"
         >
             <div className="flex items-center gap-2.5">
                 <Icon className={`w-4 h-4 ${colorClass}`} />
@@ -81,7 +56,7 @@ export default function AnalysisEngine({ isOpen = true, onToggle }: AnalysisEngi
     return (
         <div className="flex flex-col h-full bg-card overflow-hidden">
             {/* Header Area with F&G and Alerts */}
-            <div className={`border-b border-border bg-muted/10 shrink-0 flex flex-col transition-all duration-300 ${isOpen ? 'p-4 space-y-4' : 'p-2 space-y-4 items-center'}`}>
+            <div className={`border-b border-border bg-muted/10 shrink-0 flex flex-col transition-all duration-300 ${isOpen ? 'p-4 space-y-2' : 'p-2 space-y-2 items-center'}`}>
 
                 {/* Header Title & Actions Row */}
                 <div className={`flex w-full items-center ${isOpen ? 'justify-between' : 'flex-col-reverse gap-4'}`}>
@@ -95,16 +70,16 @@ export default function AnalysisEngine({ isOpen = true, onToggle }: AnalysisEngi
                     ) : null}
 
                     {/* Actions Group: Theme Toggle + Sidebar Toggle */}
-                    <div className={`flex items-center ${isOpen ? 'gap-2' : 'flex-col gap-3'}`}>
+                    <div className={`flex items-center ${isOpen ? 'gap-2' : 'flex-col gap-2'}`}>
                         <ThemeToggle />
 
                         {onToggle && (
                             <button
                                 onClick={onToggle}
-                                className="text-muted-foreground hover:text-foreground transition-colors p-1 hover:bg-muted rounded"
+                                className="text-muted-foreground hover:text-foreground transition-colors p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded cursor-pointer"
                                 title={isOpen ? "Collapse Sidebar" : "Expand Sidebar"}
                             >
-                                {isOpen ? <PanelRightClose size={18} /> : <PanelRightOpen size={18} />}
+                                {isOpen ? <PanelRightClose className="h-5 w-5 transition-all text-zinc-900 dark:text-zinc-100" /> : <PanelRightOpen className="h-5 w-5 transition-all text-zinc-900 dark:text-zinc-100" />}
                             </button>
                         )}
                     </div>
@@ -362,11 +337,14 @@ export default function AnalysisEngine({ isOpen = true, onToggle }: AnalysisEngi
                         ictBullishFVG: false,
                         ictBearishFVG: false
                     })}
-                    className="w-full py-2.5 px-4 rounded-lg bg-muted hover:bg-muted/80 text-xs font-bold uppercase tracking-wider transition-colors text-muted-foreground hover:text-foreground border border-border hover:border-input"
+                    className="w-full py-2.5 px-4 rounded-lg bg-muted hover:bg-muted/80 text-xs font-bold uppercase tracking-wider transition-colors text-muted-foreground hover:text-foreground border border-border hover:border-input cursor-pointer"
                 >
                     Reset System
                 </button>
             </div>
+
+            {/* Logic Components */}
+            <SignalMonitor />
         </div >
     );
 }

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import { Asset, TrendDirection } from '../types';
-import { useUserStore } from '../store';
+import { useTrendsStore } from '../store';
 import { fetchHistoricalData } from '../services/market';
 import { EMA, RSI, MFI } from 'technicalindicators';
 
@@ -45,7 +45,7 @@ function getMFI(high: number[], low: number[], close: number[], volume: number[]
 }
 
 export function useTrendScanner(assets: Asset[]) {
-    const { updateAssetTrend, trends } = useUserStore();
+    const { updateAssetTrend, trends } = useTrendsStore();
     const processingRef = useRef<boolean>(false);
     const indexRef = useRef<number>(0);
 

@@ -29,20 +29,23 @@ const DEFAULT_SETTINGS: UserSettings = {
 interface UserContextType {
     settings: UserSettings;
     isLoaded: boolean;
-    trends: Record<string, AssetTrends>;
     toggleFavorite: (assetId: string) => void;
     updateFilters: (newFilters: Partial<FilterCriteria>) => void;
-    updateAssetTrend: (symbol: string, data: Partial<AssetTrends>) => void;
     activeAsset: string | null;
     setActiveAsset: (symbol: string | null) => void;
     setTimeframe: (timeframe: Timeframe) => void;
 }
 
+interface TrendsContextType {
+    trends: Record<string, AssetTrends>;
+    updateAssetTrend: (symbol: string, data: Partial<AssetTrends>) => void;
+}
+
 const UserContext = createContext<UserContextType | undefined>(undefined);
+const TrendsContext = createContext<TrendsContextType | undefined>(undefined);
 
 export function UserProvider({ children }: { children: ReactNode }) {
     const [settings, setSettings] = useState<UserSettings>(DEFAULT_SETTINGS);
-    const [trends, setTrends] = useState<Record<string, AssetTrends>>({});
     const [isLoaded, setIsLoaded] = useState(false);
     const [activeAsset, setActiveAsset] = useState<string | null>(null);
 
@@ -58,11 +61,6 @@ export function UserProvider({ children }: { children: ReactNode }) {
                     filters: { ...DEFAULT_SETTINGS.filters, ...parsed.filters }
                 });
             }
-            // Load Trends Cache
-            const storedTrends = localStorage.getItem(TREND_CACHE_KEY);
-            if (storedTrends) {
-                setTrends(JSON.parse(storedTrends));
-            }
         } catch (e) {
             console.error('Failed to load user settings', e);
         } finally {
@@ -77,24 +75,9 @@ export function UserProvider({ children }: { children: ReactNode }) {
         }
     }, [settings, isLoaded]);
 
-    // Save Trends (Debounced or just on change? It might update often. Let's do it.)
-    useEffect(() => {
-        if (isLoaded) {
-            localStorage.setItem(TREND_CACHE_KEY, JSON.stringify(trends));
-        }
-    }, [trends, isLoaded]);
-
     const setTimeframe = (timeframe: Timeframe) => {
         setSettings((prev) => ({ ...prev, timeframe }));
     };
-
-    const updateAssetTrend = (symbol: string, data: Partial<AssetTrends>) => {
-        setTrends(prev => ({
-            ...prev,
-            [symbol]: { ...prev[symbol], ...data, lastUpdated: Date.now() }
-        }));
-    };
-
 
     const toggleFavorite = (assetId: string) => {
         setSettings((prev) => {
@@ -119,10 +102,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
         <UserContext.Provider value={{
             settings,
             isLoaded,
-            trends,
             toggleFavorite,
             updateFilters,
-            updateAssetTrend,
             activeAsset,
             setActiveAsset,
             setTimeframe
@@ -132,10 +113,54 @@ export function UserProvider({ children }: { children: ReactNode }) {
     );
 }
 
+export function TrendsProvider({ children }: { children: ReactNode }) {
+    const [trends, setTrends] = useState<Record<string, AssetTrends>>({});
+
+    // Load Trends Cache (Once on mount)
+    useEffect(() => {
+        try {
+            const storedTrends = localStorage.getItem(TREND_CACHE_KEY);
+            if (storedTrends) {
+                setTrends(JSON.parse(storedTrends));
+            }
+        } catch (e) {
+            console.error('Failed to load trends cache', e);
+        }
+    }, []);
+
+    // Save Trends Cache (Debounced effect - simplified here as immediate for consistency with existing logic)
+    useEffect(() => {
+        if (Object.keys(trends).length > 0) {
+            localStorage.setItem(TREND_CACHE_KEY, JSON.stringify(trends));
+        }
+    }, [trends]);
+
+    const updateAssetTrend = (symbol: string, data: Partial<AssetTrends>) => {
+        setTrends(prev => ({
+            ...prev,
+            [symbol]: { ...prev[symbol], ...data, lastUpdated: Date.now() }
+        }));
+    };
+
+    return (
+        <TrendsContext.Provider value={{ trends, updateAssetTrend }}>
+            {children}
+        </TrendsContext.Provider>
+    );
+}
+
 export function useUserStore() {
     const context = useContext(UserContext);
     if (context === undefined) {
         throw new Error('useUserStore must be used within a UserProvider');
+    }
+    return context;
+}
+
+export function useTrendsStore() {
+    const context = useContext(TrendsContext);
+    if (context === undefined) {
+        throw new Error('useTrendsStore must be used within a TrendsProvider');
     }
     return context;
 }

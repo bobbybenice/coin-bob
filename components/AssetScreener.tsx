@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { useMarketData } from '@/lib/hooks/useMarketData';
-import { useUserStore } from '@/lib/store';
+import { useUserStore, useTrendsStore } from '@/lib/store';
 import { Search, X, TrendingUp, Activity, Play } from 'lucide-react';
 import TimeframeSelector from '@/components/TimeframeSelector';
 
@@ -14,7 +14,8 @@ import { useTrendScanner } from '@/lib/hooks/useTrendScanner';
 
 export default function AssetScreener() {
   const router = useRouter();
-  const { settings, toggleFavorite, isLoaded, activeAsset, trends } = useUserStore();
+  const { settings, toggleFavorite, isLoaded, activeAsset } = useUserStore();
+  const { trends } = useTrendsStore();
   const { assets, isLoading } = useMarketData();
 
   // Background Scanner only - Alerts UI moved to Analysis Engine
