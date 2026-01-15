@@ -301,10 +301,19 @@ export function subscribeToBinanceStream(timeframe: Timeframe, isFuturesMode: bo
                     // Let's reuse Spot History for now as 'good enough' proxy for indicators, 
                     // but use Futures Price for display.
 
-                    // To Do: Hook up Futures Klines
-                    // For now, let's use 0 or last known spot RSI
-                    const rsi = 50;
-                    const score = 50; // Placeholder
+
+                    // User said "calculations are ruined". If we have NO data, we shouldn't guess 50.
+                    // But score is 0-100. 
+                    // Let's set bobScore to 50 but RSI to NaN. 
+                    // Actually, if rsi is NaN, the UI shows '-' for RSI.
+                    // The UI for BobScore handles numbers. 
+                    // Let's set BobScore to 50 (Neutral) for now, as NaN might break sorting too much?
+                    // Wait, Step 52 UI change:
+                    // <div className={`... ${asset.bobScore > 80 ... }`}> {asset.bobScore.toFixed(0)} </div>
+                    // If NaN, toFixed(0) is "NaN".
+                    // Let's set it to 50 for now to keep the UI from looking broken, but RSI to NaN. 
+                    // Actually, let's look at the implementation plan again. "Bob Score remains Neutral (50)".
+                    // Okay, I will keep score=50 but RSI=NaN.
 
                     newAssets.push({
                         id: info.id,
@@ -314,8 +323,13 @@ export function subscribeToBinanceStream(timeframe: Timeframe, isFuturesMode: bo
                         change24h: parseFloat(t.priceChangePercent),
                         volume24h: parseFloat(t.quoteVolume),
                         marketCap: 0, // Not applicable for perps
-                        rsi: rsi,
-                        bobScore: score,
+                        rsi: NaN, // Explicitly No Data
+                        bobScore: 50, // Default Neutral
+                        ema20: NaN,
+                        ema50: NaN,
+                        ema200: NaN,
+                        macd: { MACD: NaN, signal: NaN, histogram: NaN },
+                        bb: { middle: NaN, upper: NaN, lower: NaN },
                         isPerpetual: true,
                         fundingRate: fRate,
                         openInterest: 0, // We'll need separate fetch if we want it here, or load lazily

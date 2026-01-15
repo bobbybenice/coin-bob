@@ -386,21 +386,21 @@ export default function AssetScreener() {
                           (trends[asset.symbol]?.rsi4h ?? 50) > 70 ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30' :
                             'bg-zinc-800/50 text-zinc-500 border border-zinc-700/50'}`}
                           title="4H RSI">
-                          {trends[asset.symbol]?.rsi4h?.toFixed(0) ?? '-'}
+                          {(!trends[asset.symbol]?.rsi4h || isNaN(trends[asset.symbol]?.rsi4h as number)) ? '-' : trends[asset.symbol]?.rsi4h?.toFixed(0)}
                         </div>
                         {/* 1H */}
                         <div className={`w-6 h-5 rounded flex items-center justify-center text-[9px] font-mono font-bold ${(trends[asset.symbol]?.rsi1h ?? 50) < 30 ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' :
                           (trends[asset.symbol]?.rsi1h ?? 50) > 70 ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30' :
                             'bg-zinc-800/50 text-zinc-500 border border-zinc-700/50'}`}
                           title="1H RSI">
-                          {trends[asset.symbol]?.rsi1h?.toFixed(0) ?? '-'}
+                          {(!trends[asset.symbol]?.rsi1h || isNaN(trends[asset.symbol]?.rsi1h as number)) ? '-' : trends[asset.symbol]?.rsi1h?.toFixed(0)}
                         </div>
                         {/* 15m */}
                         <div className={`w-6 h-5 rounded flex items-center justify-center text-[9px] font-mono font-bold ${(trends[asset.symbol]?.rsi15m ?? 50) < 30 ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' :
                           (trends[asset.symbol]?.rsi15m ?? 50) > 70 ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30' :
                             'bg-zinc-800/50 text-zinc-500 border border-zinc-700/50'}`}
                           title="15m RSI">
-                          {trends[asset.symbol]?.rsi15m?.toFixed(0) ?? '-'}
+                          {(!trends[asset.symbol]?.rsi15m || isNaN(trends[asset.symbol]?.rsi15m as number)) ? '-' : trends[asset.symbol]?.rsi15m?.toFixed(0)}
                         </div>
                       </div>
                     </td>
@@ -411,21 +411,21 @@ export default function AssetScreener() {
                           (trends[asset.symbol]?.mfi4h ?? 50) > 80 ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30' :
                             'bg-zinc-800/50 text-zinc-500 border border-zinc-700/50'}`}
                           title="4H MFI">
-                          {trends[asset.symbol]?.mfi4h?.toFixed(0) ?? '-'}
+                          {(!trends[asset.symbol]?.mfi4h || isNaN(trends[asset.symbol]?.mfi4h as number)) ? '-' : trends[asset.symbol]?.mfi4h?.toFixed(0)}
                         </div>
                         {/* 1H */}
                         <div className={`w-6 h-5 rounded flex items-center justify-center text-[9px] font-mono font-bold ${(trends[asset.symbol]?.mfi1h ?? 50) < 20 ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' :
                           (trends[asset.symbol]?.mfi1h ?? 50) > 80 ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30' :
                             'bg-zinc-800/50 text-zinc-500 border border-zinc-700/50'}`}
                           title="1H MFI">
-                          {trends[asset.symbol]?.mfi1h?.toFixed(0) ?? '-'}
+                          {(!trends[asset.symbol]?.mfi1h || isNaN(trends[asset.symbol]?.mfi1h as number)) ? '-' : trends[asset.symbol]?.mfi1h?.toFixed(0)}
                         </div>
                         {/* 15m */}
                         <div className={`w-6 h-5 rounded flex items-center justify-center text-[9px] font-mono font-bold ${(trends[asset.symbol]?.mfi15m ?? 50) < 20 ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' :
                           (trends[asset.symbol]?.mfi15m ?? 50) > 80 ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30' :
                             'bg-zinc-800/50 text-zinc-500 border border-zinc-700/50'}`}
                           title="15m MFI">
-                          {trends[asset.symbol]?.mfi15m?.toFixed(0) ?? '-'}
+                          {(!trends[asset.symbol]?.mfi15m || isNaN(trends[asset.symbol]?.mfi15m as number)) ? '-' : trends[asset.symbol]?.mfi15m?.toFixed(0)}
                         </div>
                       </div>
                     </td>
@@ -434,7 +434,7 @@ export default function AssetScreener() {
                         {/* RSI Indicator */}
                         <div className="flex flex-col items-center gap-0.5 group/ind">
                           <span className="text-[8px] text-zinc-600 font-mono group-hover/ind:text-zinc-400">RSI</span>
-                          <div className={`w-2 h-2 rounded-full ${asset.rsi < 30 ? 'bg-emerald-500 animate-pulse shadow-[0_0_5px_currentColor]' : asset.rsi > 70 ? 'bg-rose-500 shadow-[0_0_5px_currentColor]' : 'bg-zinc-800'}`} />
+                          <div className={`w-2 h-2 rounded-full ${isNaN(asset.rsi) ? 'bg-zinc-800' : asset.rsi < 30 ? 'bg-emerald-500 animate-pulse shadow-[0_0_5px_currentColor]' : asset.rsi > 70 ? 'bg-rose-500 shadow-[0_0_5px_currentColor]' : 'bg-zinc-800'}`} />
                         </div>
                         {/* MACD Indicator */}
                         <div className="flex flex-col items-center gap-0.5 group/ind">

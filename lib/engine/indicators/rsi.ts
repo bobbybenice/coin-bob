@@ -3,7 +3,7 @@ import { Candle, IndicatorResult } from '../types';
 
 export function calculateRSI(candles: Candle[], period: number = 14): IndicatorResult {
     if (candles.length < period) {
-        return { value: 0, signal: 'neutral' };
+        return { value: NaN, signal: 'neutral' };
     }
 
     const closes = candles.map(c => c.close);

@@ -18,17 +18,7 @@ This workflow ensures all external data sources in CoinBob are robust, rate-limi
 - [ ] **Caching**: Use simple in-memory variables or `localStorage` with timestamps to prevent refetching too often (e.g., "stale-while-revalidate").
 
 ## 3. Mock Data Strategy (Mandatory)
-- [ ] Create a `MOCK_[DATA_TYPE]` constant in the service file.
-- [ ] **Fallback Logic**:
-```typescript
-try {
-  if (useMock || !apiKey) return MOCK_DATA;
-  const res = await fetch(...);
-  return res.ok ? res.json() : MOCK_DATA;
-} catch (e) {
-  console.error(e);
-  return MOCK_DATA; // Always return data, never crash
-}
+- NO MOCK DATA, display messages if a service is down, etc.
 ```
 
 ## 4. UI Integration

@@ -45,12 +45,14 @@ export function analyzeAsset(candles: Candle[]): TechnicalAnalysis {
 
     // 2. Momentum / Exhaustion (+/- 25)
     // Oversold (Bullish Reversal / Dip Buy)
-    if (rsi.value < 30) score += 20;
-    else if (rsi.value < 45) score += 10;
+    if (!isNaN(rsi.value)) {
+        if (rsi.value < 30) score += 20;
+        else if (rsi.value < 45) score += 10;
 
-    // Overbought (Bearish Reversal / Top Short)
-    if (rsi.value > 70) score -= 20;
-    else if (rsi.value > 55) score -= 10;
+        // Overbought (Bearish Reversal / Top Short)
+        if (rsi.value > 70) score -= 20;
+        else if (rsi.value > 55) score -= 10;
+    }
 
     // Bollinger Band Interaction
     if (bb.value.lower && currentPrice < bb.value.lower) score += 5;

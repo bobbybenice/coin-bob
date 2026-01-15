@@ -4,7 +4,7 @@ description: How to implement a new feature in CoinBob
 
 # Feature Implementation Workflow
 
-This workflow outlines the standard process for adding new features to CoinBob, ensuring adherence to project standards like offline-first, mock fallbacks, and rigorous documentation.
+This workflow outlines the standard process for adding new features to CoinBob, ensuring adherence to project standards like offline-first, no mock fallbacks but informative messages, and rigorous documentation.
 
 ## 1. Planning & Design
 - [ ] **Review Requirements**: Understand the core user need.

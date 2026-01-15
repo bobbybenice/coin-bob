@@ -3,7 +3,7 @@ import { Candle, IndicatorResult } from '../types';
 
 export function calculateEMA(candles: Candle[], period: number): IndicatorResult {
     if (candles.length < period) {
-        return { value: 0, signal: 'neutral' };
+        return { value: NaN, signal: 'neutral' };
     }
 
     const closes = candles.map(c => c.close);
