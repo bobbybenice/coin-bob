@@ -6,6 +6,10 @@ import { Timeframe, StrategyName } from '@/lib/types';
 import { useChartData } from '@/lib/hooks/useChartData';
 import { useStrategyMarkers } from '@/lib/hooks/useStrategyMarkers';
 import { getAllStrategyNames, getStrategy } from '@/lib/engine/strategies';
+import { runBacktest } from '@/lib/engine/backtester';
+import { BacktestResult } from '@/lib/engine/types'; // Import BacktestResult type
+import { useUserStore } from '@/lib/store';
+import { Trophy } from 'lucide-react';
 
 interface ChartInstanceProps {
     symbol: string;
@@ -31,8 +35,56 @@ export function ChartInstance({
     const [timeframe, setTimeframe] = useState<Timeframe>(initialTimeframe);
     const [selectedStrategy, setSelectedStrategy] = useState<StrategyName | null>(initialStrategy);
 
+    const { isBacktestMode, backtestOptions } = useUserStore();
+    const [backtestResult, setBacktestResult] = useState<BacktestResult | null>(null);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const [backtestMarkers, setBacktestMarkers] = useState<any[]>([]);
+
     const { candles, isLoading, error } = useChartData(symbol, timeframe);
-    const { markers, strategyStatus } = useStrategyMarkers(candles, selectedStrategy);
+    const { markers: liveMarkers, strategyStatus } = useStrategyMarkers(candles, selectedStrategy);
+
+    // Calculate Backtest Results when in mode
+    useEffect(() => {
+        if (isBacktestMode && selectedStrategy && candles.length > 0) {
+            const strategyConfig = getStrategy(selectedStrategy);
+            if (strategyConfig) {
+                const result = runBacktest(strategyConfig.execute, candles, backtestOptions);
+                setBacktestResult(result);
+
+                // Convert trades to markers
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const newMarkers: any[] = [];
+                result.trades.forEach(trade => {
+                    // Entry Marker
+                    newMarkers.push({
+                        time: trade.entryTime / 1000 as Time,
+                        position: trade.side === 'LONG' ? 'belowBar' : 'aboveBar',
+                        shape: trade.side === 'LONG' ? 'arrowUp' : 'arrowDown',
+                        color: trade.side === 'LONG' ? '#10b981' : '#ef4444',
+                        text: `ENTRY ${trade.side}`,
+                        size: 2
+                    });
+
+                    // Exit Marker
+                    newMarkers.push({
+                        time: trade.exitTime / 1000 as Time,
+                        position: trade.side === 'LONG' ? 'aboveBar' : 'belowBar',
+                        shape: 'circle',
+                        color: trade.pnl > 0 ? '#fbbf24' : '#ef4444', // Gold for win, Red for loss
+                        text: `EXIT ${trade.pnl > 0 ? 'WIN' : 'LOSS'}`,
+                        size: 2
+                    });
+                });
+                setBacktestMarkers(newMarkers);
+            }
+        } else {
+            setBacktestResult(null);
+            setBacktestMarkers([]);
+        }
+    }, [isBacktestMode, selectedStrategy, candles, backtestOptions]);
+
+    // effective markers
+    const markers = isBacktestMode ? backtestMarkers : liveMarkers;
 
     // Initialize chart
     useEffect(() => {
@@ -198,6 +250,39 @@ export function ChartInstance({
                 )}
 
                 <div ref={chartContainerRef} className="w-full h-full" />
+
+                {/* Backtest Overlay Summary */}
+                {isBacktestMode && backtestResult && (
+                    <div className="absolute top-4 left-4 z-20 bg-background/90 backdrop-blur border border-emerald-500/30 rounded-lg p-3 shadow-xl animate-in fade-in zoom-in-95 duration-200 min-w-[180px]">
+                        <div className="flex items-center gap-2 mb-2 border-b border-white/10 pb-2">
+                            <Trophy className="w-4 h-4 text-emerald-500" />
+                            <span className="text-xs font-bold text-emerald-500 uppercase tracking-wider">Backtest Result</span>
+                        </div>
+
+                        <div className="space-y-1.5">
+                            <div className="flex justify-between items-center text-xs">
+                                <span className="text-muted-foreground">Trades</span>
+                                <span className="font-mono font-bold text-foreground">{backtestResult.totalTrades}</span>
+                            </div>
+                            <div className="flex justify-between items-center text-xs">
+                                <span className="text-muted-foreground">Win Rate</span>
+                                <span className={`font-mono font-bold ${backtestResult.winRate >= 50 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                                    {backtestResult.winRate.toFixed(1)}%
+                                </span>
+                            </div>
+                            <div className="flex justify-between items-center text-xs">
+                                <span className="text-muted-foreground">Est. PnL</span>
+                                <span className={`font-mono font-bold ${backtestResult.pnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                                    ${backtestResult.pnl.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                                </span>
+                            </div>
+                            <div className="flex justify-between items-center text-xs">
+                                <span className="text-muted-foreground">Pos Size</span>
+                                <span className="font-mono font-bold text-foreground">$1,000</span>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );

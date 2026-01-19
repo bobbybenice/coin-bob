@@ -1,9 +1,21 @@
 import { Candle, StrategyFunction, BacktestResult, TradeRecord } from './types';
 
+export interface BacktestOptions {
+    initialBalance: number;
+    stopLossPercent: number; // e.g. 2.0 = 2%
+    riskRewardRatio: number; // e.g. 2.0 = 1:2
+    enableSoftExits: boolean; // true = allow strategy to exit early
+}
+
 export function runBacktest(
     strategy: StrategyFunction,
     candles: Candle[],
-    initialBalance: number = 10000
+    options: BacktestOptions = {
+        initialBalance: 10000,
+        stopLossPercent: 2,
+        riskRewardRatio: 2,
+        enableSoftExits: true
+    }
 ): BacktestResult {
     // Skeleton implementation
     // 1. Need enough data for strategy warmup (e.g. 50 candles)
@@ -18,7 +30,7 @@ export function runBacktest(
         takeProfit?: number;
     } | null = null;
 
-    let balance = initialBalance;
+    let balance = options.initialBalance;
 
     for (let i = warmupPeriod; i < candles.length; i++) {
         const slice = candles.slice(0, i + 1);
@@ -53,7 +65,9 @@ export function runBacktest(
             }
 
             // Signal Exit (Independent of side, usually)
-            if (!exitPrice && result.status === 'EXIT') {
+            // A "Soft Exit" is when the strategy itself signals an exit (e.g. indicator reversal)
+            // regardless of whether SL or TP has been hit.
+            if (!exitPrice && options.enableSoftExits && result.status === 'EXIT') {
                 exitPrice = currentCandle.close;
             }
 
@@ -85,22 +99,24 @@ export function runBacktest(
                 const side = (result.metadata?.side as 'LONG' | 'SHORT') || 'LONG';
                 const entryPrice = currentCandle.close;
 
-                let stopLoss = result.priceLevels.stopLoss;
-                let takeProfit = result.priceLevels.takeProfit;
 
-                // Default SL/TP Calculation
+
+                let stopLoss = 0;
+                let takeProfit = 0;
+
+                // Priority: User Options > Strategy Levels
+                // Since this is a "Backtester" allowing user tweaks, we use the user's SL/TP settings.
+
                 if (side === 'LONG') {
-                    if (!stopLoss) stopLoss = entryPrice * 0.98; // 2% SL
-                    if (!takeProfit) {
-                        const risk = entryPrice - stopLoss;
-                        takeProfit = entryPrice + (risk * 2); // 2R
-                    }
+                    // Long: SL below entry, TP above
+                    stopLoss = entryPrice * (1 - options.stopLossPercent / 100);
+                    const risk = entryPrice - stopLoss;
+                    takeProfit = entryPrice + (risk * options.riskRewardRatio);
                 } else {
-                    if (!stopLoss) stopLoss = entryPrice * 1.02; // 2% SL
-                    if (!takeProfit) {
-                        const risk = stopLoss - entryPrice;
-                        takeProfit = entryPrice - (risk * 2); // 2R
-                    }
+                    // Short: SL above entry, TP below
+                    stopLoss = entryPrice * (1 + options.stopLossPercent / 100);
+                    const risk = stopLoss - entryPrice;
+                    takeProfit = entryPrice - (risk * options.riskRewardRatio);
                 }
 
                 currentPosition = {
@@ -143,7 +159,7 @@ export function runBacktest(
     return {
         totalTrades: trades.length,
         winRate: trades.length > 0 ? (wins / trades.length) * 100 : 0,
-        pnl: balance - initialBalance, // Simplified, actual logic would update balance
+        pnl: balance - options.initialBalance,
         trades
     };
 }

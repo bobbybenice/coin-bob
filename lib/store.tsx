@@ -2,6 +2,7 @@
 
 import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
 import { UserSettings, FilterCriteria, Timeframe, AssetTrends } from './types';
+import { BacktestOptions } from './engine/backtester';
 
 const SETTINGS_CACHE_KEY = 'coinbob_user_settings_v1';
 const TREND_CACHE_KEY = 'coinbob_trend_cache_v3';
@@ -39,6 +40,12 @@ interface UserContextType {
     // Futures Logic
     isFuturesMode: boolean;
     toggleFuturesMode: () => void;
+
+    // Backtest Mode
+    isBacktestMode: boolean;
+    toggleBacktestMode: () => void;
+    backtestOptions: BacktestOptions;
+    updateBacktestOptions: (options: Partial<BacktestOptions>) => void;
 }
 
 interface TrendsContextType {
@@ -95,6 +102,23 @@ export function UserProvider({ children }: { children: ReactNode }) {
         setIsFuturesMode(prev => !prev);
     };
 
+    const [isBacktestMode, setIsBacktestMode] = useState(false);
+
+    const toggleBacktestMode = () => {
+        setIsBacktestMode(prev => !prev);
+    };
+
+    const [backtestOptions, setBacktestOptions] = useState<BacktestOptions>({
+        initialBalance: 10000,
+        stopLossPercent: 2.0,
+        riskRewardRatio: 2.0,
+        enableSoftExits: true
+    });
+
+    const updateBacktestOptions = (newOptions: Partial<BacktestOptions>) => {
+        setBacktestOptions(prev => ({ ...prev, ...newOptions }));
+    };
+
     return (
         <UserContext.Provider value={{
             settings,
@@ -105,7 +129,11 @@ export function UserProvider({ children }: { children: ReactNode }) {
             setActiveAsset,
             setTimeframe,
             isFuturesMode,
-            toggleFuturesMode
+            toggleFuturesMode,
+            isBacktestMode,
+            toggleBacktestMode,
+            backtestOptions,
+            updateBacktestOptions
         }}>
             {children}
         </UserContext.Provider>
