@@ -1,17 +1,19 @@
 'use client';
 
 import { useState, useMemo, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { useMarketData } from '@/lib/hooks/useMarketData';
 import { useUserStore, useTrendsStore } from '@/lib/store';
 import { Search, X, TrendingUp, Activity, Play } from 'lucide-react';
 import TimeframeSelector from '@/components/TimeframeSelector';
 import { useTrendScanner } from '@/lib/hooks/useTrendScanner';
-import Link from 'next/link';
+
 
 type SortField = 'price' | 'change24h' | 'rsi' | 'bobScore' | 'symbol' | 'volume24h';
 type SortDirection = 'asc' | 'desc';
 
 export default function AssetScreener() {
+  const router = useRouter();
   const { settings, toggleFavorite, isLoaded, activeAsset, isFuturesMode, toggleFuturesMode } = useUserStore();
   const { trends } = useTrendsStore();
   const { assets, isLoading } = useMarketData();
@@ -464,13 +466,16 @@ export default function AssetScreener() {
                     <td className="py-2.5 px-4 text-center">
                       <div className="flex items-center justify-center gap-2">
                         {/* Play Button - Navigate to Analyze */}
-                        <Link
-                          href={`/analyze/${asset.symbol}`}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            router.push(`/analyze/${asset.symbol}`);
+                          }}
                           className="p-1.5 rounded-md transition-all text-emerald-500 bg-emerald-500/10 hover:bg-emerald-500/20 hover:scale-110"
                           title="Analyze"
                         >
                           <Play className="w-4 h-4 fill-current" />
-                        </Link>
+                        </button>
 
                         {/* Favorite Star */}
                         <button
