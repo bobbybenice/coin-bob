@@ -5,15 +5,13 @@ import { useMarketData } from '@/lib/hooks/useMarketData';
 import { useUserStore, useTrendsStore } from '@/lib/store';
 import { Search, X, TrendingUp, Activity, Play } from 'lucide-react';
 import TimeframeSelector from '@/components/TimeframeSelector';
+import { useTrendScanner } from '@/lib/hooks/useTrendScanner';
+import Link from 'next/link';
 
 type SortField = 'price' | 'change24h' | 'rsi' | 'bobScore' | 'symbol' | 'volume24h';
 type SortDirection = 'asc' | 'desc';
 
-import { useRouter } from 'next/navigation';
-import { useTrendScanner } from '@/lib/hooks/useTrendScanner';
-
 export default function AssetScreener() {
-  const router = useRouter();
   const { settings, toggleFavorite, isLoaded, activeAsset, isFuturesMode, toggleFuturesMode } = useUserStore();
   const { trends } = useTrendsStore();
   const { assets, isLoading } = useMarketData();
@@ -327,8 +325,7 @@ export default function AssetScreener() {
                 return (
                   <tr
                     key={asset.id}
-                    onClick={() => router.push(`/analyze/${asset.symbol}`)}
-                    className={`group transition-colors cursor-pointer ${isActive ? 'bg-emerald-500/10 hover:bg-emerald-500/20' : 'hover:bg-muted/50'}`}
+                    className={`group transition-colors ${isActive ? 'bg-emerald-500/10' : 'hover:bg-muted/50'}`}
                   >
                     <td className="py-2.5 px-2 lg:px-4">
                       <div className="flex items-center gap-3">
@@ -465,20 +462,24 @@ export default function AssetScreener() {
                       </div>
                     </td>
                     <td className="py-2.5 px-4 text-center">
-                      <div className="flex items-center justify-center gap-1">
-                        <button
-                          onClick={(e) => { e.stopPropagation(); router.push(`/backtest?symbol=${asset.symbol}&timeframe=${settings.timeframe}`); }}
-                          className="p-1.5 rounded-md text-muted-foreground hover:text-emerald-400 hover:bg-emerald-500/10 transition-all"
-                          title="Run Backtest"
+                      <div className="flex items-center justify-center gap-2">
+                        {/* Play Button - Navigate to Analyze */}
+                        <Link
+                          href={`/analyze/${asset.symbol}`}
+                          className="p-1.5 rounded-md transition-all text-emerald-500 bg-emerald-500/10 hover:bg-emerald-500/20 hover:scale-110"
+                          title="Analyze"
                         >
-                          <Play className="w-3.5 h-3.5 fill-current" />
-                        </button>
+                          <Play className="w-4 h-4 fill-current" />
+                        </Link>
+
+                        {/* Favorite Star */}
                         <button
                           onClick={(e) => { e.stopPropagation(); toggleFavorite(asset.id); }}
                           className={`p-1.5 rounded-md transition-all ${settings.favorites.includes(asset.id)
                             ? 'text-amber-400 bg-amber-400/10 hover:bg-amber-400/20'
                             : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
                             }`}
+                          title="Favorite"
                         >
                           {settings.favorites.includes(asset.id) ? '★' : '☆'}
                         </button>
@@ -546,7 +547,6 @@ export default function AssetScreener() {
                       <button
                         key={asset.id}
                         onClick={() => {
-                          router.push(`/analyze/${asset.symbol}`);
                           setIsSearchOpen(false);
                         }}
                         className="w-full flex items-center justify-between p-2.5 rounded-lg hover:bg-muted/50 group transition-colors text-left"

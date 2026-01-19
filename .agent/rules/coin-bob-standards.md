@@ -9,3 +9,4 @@ trigger: always_on
 - Documentation: Always update task.md after changes.
 - Math: Use 'technicalindicators' library for RSI/EMA, etc.
 - Style: Direct, clean code. Minimal prose.
+- Testing: Always implement and run end-to-end and unit tests

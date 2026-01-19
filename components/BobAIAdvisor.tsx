@@ -5,10 +5,7 @@ import { useMarketData } from '@/lib/hooks/useMarketData';
 import { useNews } from '@/lib/hooks/useNews';
 import { useWhaleData } from '@/lib/hooks/useWhaleData';
 
-import { useRouter } from 'next/navigation';
-
 export default function BobAIAdvisor({ contextOverride }: { contextOverride?: string }) {
-    const router = useRouter();
     const { settings } = useUserStore();
     const { assets, isLoading } = useMarketData();
     const { news, error: newsError } = useNews();
@@ -134,13 +131,12 @@ export default function BobAIAdvisor({ contextOverride }: { contextOverride?: st
                                         const isAsset = assets.some(a => a.symbol === part);
                                         if (isAsset) {
                                             return (
-                                                <button
+                                                <span
                                                     key={i}
-                                                    onClick={() => router.push(`/analyze/${part}`)}
-                                                    className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-muted hover:bg-indigo-500/20 hover:text-indigo-300 border border-border hover:border-indigo-500/50 mx-0.5 transition-all cursor-pointer"
+                                                    className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/50 mx-0.5"
                                                 >
                                                     {part}
-                                                </button>
+                                                </span>
                                             );
                                         }
                                     }

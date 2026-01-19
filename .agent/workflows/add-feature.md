@@ -30,6 +30,7 @@ This workflow outlines the standard process for adding new features to CoinBob, 
 - [ ] **Lint**: Run generic lint command or check for visible errors.
 - [ ] **Test Fallbacks**: Disconnect network or remove API keys to verify Mock Data works.
 - [ ] **Responsiveness**: Check on simulated Mobile and Desktop views.
+- [ ] **Testing**: Implement and run end-2-end and unit tests
 
 ## 5. Documentation
 - [ ] **Update task.md**: Mark items as complete.

@@ -138,3 +138,20 @@ export interface AssetTrends {
     mfi4h?: number;
     lastUpdated?: number;
 }
+
+export type StrategyName =
+    | 'RSI_MFI'
+    | 'BOLLINGER_BOUNCE'
+    | 'MACD_DIVERGENCE'
+    | 'EMA_CROSSOVER'
+    | 'VOLUME_BREAKOUT'
+    | 'SUPPORT_RESISTANCE';
+
+export interface ChartMarker {
+    time: number;
+    position: 'aboveBar' | 'belowBar' | 'inBar';
+    color: string;
+    shape: 'circle' | 'square' | 'arrowUp' | 'arrowDown';
+    text?: string;
+    size?: number;
+}
