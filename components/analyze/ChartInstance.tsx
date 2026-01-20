@@ -35,12 +35,12 @@ export function ChartInstance({
     const [timeframe, setTimeframe] = useState<Timeframe>(initialTimeframe);
     const [selectedStrategy, setSelectedStrategy] = useState<StrategyName | null>(initialStrategy);
 
-    const { isBacktestMode, backtestOptions } = useUserStore();
+    const { isBacktestMode, backtestOptions, isFuturesMode } = useUserStore();
     const [backtestResult, setBacktestResult] = useState<BacktestResult | null>(null);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [backtestMarkers, setBacktestMarkers] = useState<any[]>([]);
 
-    const { candles, isLoading, error } = useChartData(symbol, timeframe);
+    const { candles, isLoading, error } = useChartData(symbol, timeframe, isFuturesMode);
     const { markers: liveMarkers, strategyStatus } = useStrategyMarkers(candles, selectedStrategy);
 
     // Calculate Backtest Results when in mode
@@ -154,11 +154,18 @@ export function ChartInstance({
 
         candleSeriesRef.current.setData(formattedData);
 
-        // Auto-fit content
-        if (chartRef.current) {
+        // ONLY fit content if this is the initial load (chart thinks it's empty or we explicitly want to)
+        // We use a separate effect for explicit resets now, so we don't need to force it here every time.
+        // However, on FIRST load of a new symbol/timeframe, we likely want to fit.
+        // But since 'candles' updates every second, we MUST NOT fitContent every time.
+    }, [candles]);
+
+    // Initial Fit Content when data creates
+    useEffect(() => {
+        if (candleSeriesRef.current && candles.length > 0 && chartRef.current && !isLoading) {
             chartRef.current.timeScale().fitContent();
         }
-    }, [candles]);
+    }, [isLoading, symbol, timeframe]); // Re-fit when symbol/timeframe changes and finishes loading
 
     // Update markers using createSeriesMarkers
     useEffect(() => {

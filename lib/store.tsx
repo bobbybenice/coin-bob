@@ -96,7 +96,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
         }));
     };
 
-    const [isFuturesMode, setIsFuturesMode] = useState(false);
+    const [isFuturesMode, setIsFuturesMode] = useState(true);
 
     const toggleFuturesMode = () => {
         setIsFuturesMode(prev => !prev);
