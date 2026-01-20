@@ -1,5 +1,3 @@
-'use server';
-
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 const FAPI_BASE = 'https://fapi.binance.com';
@@ -20,38 +18,83 @@ export interface PremiumIndex {
 export interface OpenInterest {
     symbol: string;
     openInterest: string; // In base asset
-    // We usually need to convert to USD using price, or use a different endpoint if available.
-    // simpler: fetch ticker price * OI
 }
+
+
+// CACHE STATE
+let fundingCache: { data: PremiumIndex[], timestamp: number } | null = null;
+let fundingPromise: Promise<PremiumIndex[]> | null = null;
+const FUNDING_TTL = 60 * 1000; // 60 Seconds (Safe, as funding updates every 8h)
+
+let tickerCache: { data: FuturesTicker[], timestamp: number } | null = null;
+let tickerPromise: Promise<FuturesTicker[]> | null = null;
+const TICKER_TTL = 1000; // 1 Second (Dedups simultaneous calls from multiple components)
 
 // Batch fetch 24h ticker for all symbols (lightweight)
 export async function fetchFuturesDailyStats(): Promise<FuturesTicker[]> {
-    try {
-        const res = await fetch(`${FAPI_BASE}/fapi/v1/ticker/24hr`, {
-            next: { revalidate: 10 }, // 10 seconds cache
-            headers: { 'User-Agent': 'CoinBob/1.0' }
-        });
-        if (!res.ok) throw new Error('Failed to fetch futures ticker');
-        return await res.json();
-    } catch (error) {
-        console.error('Futures Ticker Error:', error);
-        return [];
+    const now = Date.now();
+
+    // 1. Return Cache if valid
+    if (tickerCache && (now - tickerCache.timestamp < TICKER_TTL)) {
+        return tickerCache.data;
     }
+
+    // 2. Return In-Flight Promise to dedup simultaneous calls
+    if (tickerPromise) return tickerPromise;
+
+    // 3. Fetch New Data
+    tickerPromise = (async () => {
+        try {
+            const res = await fetch(`${FAPI_BASE}/fapi/v1/ticker/24hr`, {
+                // cache: 'no-store', // Optional: standard fetch cache control if needed, but defaults are usually fine for real-time
+                headers: { 'User-Agent': 'CoinBob/1.0' }
+            });
+            if (!res.ok) throw new Error('Failed to fetch futures ticker');
+            const data = await res.json();
+
+            tickerCache = { data, timestamp: Date.now() };
+            return data;
+        } catch (error) {
+            console.error('Futures Ticker Error:', error);
+            return [];
+        } finally {
+            tickerPromise = null;
+        }
+    })();
+
+    return tickerPromise;
 }
 
 // Batch fetch Premium Index (contains Funding Rate)
 export async function fetchFundingRates(): Promise<PremiumIndex[]> {
-    try {
-        const res = await fetch(`${FAPI_BASE}/fapi/v1/premiumIndex`, {
-            next: { revalidate: 60 }, // 1 min cache
-            headers: { 'User-Agent': 'CoinBob/1.0' }
-        });
-        if (!res.ok) throw new Error('Failed to fetch funding rates');
-        return await res.json();
-    } catch (error) {
-        console.error('Funding Rate Error:', error);
-        return [];
+    const now = Date.now();
+
+    // 1. Return Cache if valid (Aggressive caching for static-like data)
+    if (fundingCache && (now - fundingCache.timestamp < FUNDING_TTL)) {
+        return fundingCache.data;
     }
+
+    if (fundingPromise) return fundingPromise;
+
+    fundingPromise = (async () => {
+        try {
+            const res = await fetch(`${FAPI_BASE}/fapi/v1/premiumIndex`, {
+                headers: { 'User-Agent': 'CoinBob/1.0' }
+            });
+            if (!res.ok) throw new Error('Failed to fetch funding rates');
+            const data = await res.json();
+
+            fundingCache = { data, timestamp: Date.now() };
+            return data;
+        } catch (error) {
+            console.error('Funding Rate Error:', error);
+            return [];
+        } finally {
+            fundingPromise = null;
+        }
+    })();
+
+    return fundingPromise;
 }
 
 // Fetch Open Interest for a SPECIFIC symbol (Binance doesn't have a lightweight "ALL" OI endpoint public easily)
@@ -65,7 +108,6 @@ export async function fetchFundingRates(): Promise<PremiumIndex[]> {
 export async function fetchOpenInterest(symbol: string): Promise<number> {
     try {
         const res = await fetch(`${FAPI_BASE}/fapi/v1/openInterest?symbol=${symbol}`, {
-            next: { revalidate: 60 },
             headers: { 'User-Agent': 'CoinBob/1.0' }
         });
         if (!res.ok) return 0;
