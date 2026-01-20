@@ -4,6 +4,7 @@ import { useNews } from '@/lib/hooks/useNews';
 import { useUserStore } from '@/lib/store';
 
 import { Newspaper } from 'lucide-react';
+import { Button } from './ui/Button';
 
 export default function NewsFeed() {
     const { activeAsset } = useUserStore();
@@ -18,14 +19,16 @@ export default function NewsFeed() {
                     News Wire: {activeAsset || 'MARKET'}
                 </h2>
                 <div className="flex items-center gap-2">
-                    <button
+                    <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={refresh}
                         disabled={loading}
-                        className="text-[10px] text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+                        className="text-[10px] text-muted-foreground hover:text-foreground h-auto p-1 hover:bg-transparent"
                         title="Refresh"
                     >
                         REFRESH
-                    </button>
+                    </Button>
                 </div>
             </div>
 
@@ -41,12 +44,13 @@ export default function NewsFeed() {
                             <p className="text-red-400 font-medium text-sm">Connection Error</p>
                             <p className="text-muted-foreground text-xs mt-1 font-mono">{error}</p>
                         </div>
-                        <button
+                        <Button
+                            variant="secondary"
                             onClick={refresh}
-                            className="px-4 py-2 bg-muted hover:bg-muted/80 text-muted-foreground hover:text-foreground text-xs rounded-lg border border-border transition-all font-medium"
+                            className="px-4 h-8 text-xs font-medium"
                         >
                             Retry Connection
-                        </button>
+                        </Button>
                     </div>
                 ) : loading ? (
                     <div className="space-y-4 p-4">

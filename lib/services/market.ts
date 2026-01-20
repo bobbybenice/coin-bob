@@ -111,3 +111,26 @@ export async function fetchHistoricalData(symbol: string, interval: string = '1d
 
     return [];
 }
+
+export async function fetchHistoricalDataBatch(symbols: string[], interval: string = '1d', isFutures: boolean = false): Promise<Record<string, Candle[]>> {
+    const results: Record<string, Candle[]> = {};
+
+    // Process in parallel with a concurrency limit if needed, 
+    // but Next.js Server Actions usually handle this fine. 
+    // Let's do chunked parallel execution to be safe.
+    const CHUNK_SIZE = 5;
+
+    for (let i = 0; i < symbols.length; i += CHUNK_SIZE) {
+        const chunk = symbols.slice(i, i + CHUNK_SIZE);
+        await Promise.all(chunk.map(async (symbol) => {
+            try {
+                results[symbol] = await fetchHistoricalData(symbol, interval, isFutures);
+            } catch (e) {
+                console.error(`Batch fetch failed for ${symbol}`, e);
+                results[symbol] = [];
+            }
+        }));
+    }
+
+    return results;
+}

@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { ChartInstance } from './ChartInstance';
+import { Button } from '../ui/Button';
 
 interface MultiChartViewProps {
     symbol: string;
@@ -31,33 +32,39 @@ export function MultiChartView({ symbol }: MultiChartViewProps) {
                 <div className="flex items-center gap-2">
                     <span className="text-xs text-muted-foreground font-medium mr-2">Charts:</span>
                     <div className="flex items-center bg-muted p-1 rounded-lg border border-border/50 gap-1">
-                        <button
+                        <Button
                             onClick={() => handleChartCountChange(1)}
-                            className={`px-4 py-2 text-xs font-bold rounded-md transition-all duration-200 ${chartCount === 1
-                                    ? 'bg-emerald-600 text-white shadow-sm ring-1 ring-emerald-500'
-                                    : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
+                            variant={chartCount === 1 ? 'emerald' : 'ghost'}
+                            size="sm"
+                            className={`px-4 py-2 text-xs font-bold rounded-md transition-all duration-200 h-auto ${chartCount === 1
+                                ? 'shadow-sm ring-1 ring-emerald-500'
+                                : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
                                 }`}
                         >
                             1
-                        </button>
-                        <button
+                        </Button>
+                        <Button
                             onClick={() => handleChartCountChange(2)}
-                            className={`px-4 py-2 text-xs font-bold rounded-md transition-all duration-200 ${chartCount === 2
-                                    ? 'bg-emerald-600 text-white shadow-sm ring-1 ring-emerald-500'
-                                    : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
+                            variant={chartCount === 2 ? 'emerald' : 'ghost'}
+                            size="sm"
+                            className={`px-4 py-2 text-xs font-bold rounded-md transition-all duration-200 h-auto ${chartCount === 2
+                                ? 'shadow-sm ring-1 ring-emerald-500'
+                                : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
                                 }`}
                         >
                             2
-                        </button>
-                        <button
+                        </Button>
+                        <Button
                             onClick={() => handleChartCountChange(3)}
-                            className={`px-4 py-2 text-xs font-bold rounded-md transition-all duration-200 ${chartCount === 3
-                                    ? 'bg-emerald-600 text-white shadow-sm ring-1 ring-emerald-500'
-                                    : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
+                            variant={chartCount === 3 ? 'emerald' : 'ghost'}
+                            size="sm"
+                            className={`px-4 py-2 text-xs font-bold rounded-md transition-all duration-200 h-auto ${chartCount === 3
+                                ? 'shadow-sm ring-1 ring-emerald-500'
+                                : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
                                 }`}
                         >
                             3
-                        </button>
+                        </Button>
                     </div>
                 </div>
             </div>
@@ -65,10 +72,10 @@ export function MultiChartView({ symbol }: MultiChartViewProps) {
             {/* Charts Grid */}
             <div
                 className={`flex-1 grid gap-4 px-4 pb-4 ${chartCount === 1
-                        ? 'grid-cols-1'
-                        : chartCount === 2
-                            ? 'grid-cols-1 md:grid-cols-2'
-                            : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'
+                    ? 'grid-cols-1'
+                    : chartCount === 2
+                        ? 'grid-cols-1 md:grid-cols-2'
+                        : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'
                     }`}
             >
                 {/* Chart 1 - Always visible */}

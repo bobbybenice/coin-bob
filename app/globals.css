@@ -49,6 +49,14 @@
   --muted: #27272a;
   --muted-foreground: #a1a1aa;
   /* Zinc 400 */
+
+  /* Bob Financial Semantics */
+  --up: #10b981;
+  /* Emerald 500 */
+  --down: #f43f5e;
+  /* Rose 500 */
+  --neutral: #71717a;
+  /* Zinc 500 */
 }
 
 body {
@@ -85,4 +93,29 @@ body {
 .no-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;
+}
+
+/* Semantic Utilities */
+.text-up {
+  color: var(--up);
+}
+
+.text-down {
+  color: var(--down);
+}
+
+.bg-up {
+  background-color: var(--up);
+}
+
+.bg-down {
+  background-color: var(--down);
+}
+
+.border-up {
+  border-color: var(--up);
+}
+
+.border-down {
+  border-color: var(--down);
 }

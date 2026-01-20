@@ -6,25 +6,29 @@ description: How to diagnose and fix UI/UX issues
 
 Standard process for resolving layout, animation, and responsive design issues.
 
-## 1. Reproduction & Analysis
-- [ ] **Isolate**: Determine if it's a Logic issue or CSS issue.
-- [ ] **Viewport Check**: Is it broken on Mobile, Desktop, or both?
-- [ ] **Component Check**: Which component is the culprit? (e.g., `AnalysisEngine`, `AssetScreener`).
+---
+name: fix-ui
+description: Refactor components for reusability, modernize UI, and update Tailwind config.
+---
 
-## 2. Solution Strategy
-- [ ] **Mobile First**: Fix for mobile (`base` styles) then check desktop (`md:`+).
-- [ ] **Layout Stability**:
-  - Avoid `width: auto` for animating containers if possible. Use fixed or percentage widths.
-  - Use `flex-shrink-0` to prevent items from squishing.
-- [ ] **Animations**:
-  - Use simple CSS transitions or `framer-motion`.
-  - Ensure `overflow` is handled correctly during expansion/collapse.
+# UI/UX Refactor & Fix Workflow
 
-## 3. Implementation
-- [ ] Apply the fix.
-- [ ] **Clean Code**: Remove unused classes. Use Tailwind standards.
-- [ ] **Consistency**: Ensure colors use the defined palette variables (e.g., `bg-background`, `text-primary`).
+## 1. Analysis & Modularization
+- [ ] **Scan**: Identify repeated UI patterns and monolithic components.
+- [ ] **Audit**: Check responsiveness and existing Tailwind utility bloat.
+- [ ] **Plan**: List components to extract in `implementation_plan.md`.
 
-## 4. Verification
-- [ ] **Resize Test**: Drag the browser window from small to large to ensure smooth reflow.
-- [ ] **Console Check**: Ensure no Hydration Mismatch errors (common with responsive rendering).
+## 2. Global Styling (Tailwind Config)
+- [ ] **Theme Sync**: Move common values (colors, spacing, shadows) to `tailwind.config.js`.
+- [ ] **Reusable Classes**: Add a `@layer components` section in your global CSS for repetitive patterns (e.g., `.btn-primary`, `.card-wrapper`).
+- [ ] **Variables**: Ensure all colors use theme tokens (e.g., `text-primary`) rather than hex codes.
+
+## 3. Component Extraction
+- [ ] **Modularize**: Move UI logic to standalone files with clear TypeScript interfaces.
+- [ ] **Mobile First**: Implement `base` styles first, then `md:` breakpoints.
+- [ ] **Stability**: Use `flex-shrink-0` and manage `overflow` for animations.
+
+## 4. Verification & Cleanup
+- [ ] **Optimization**: Remove unused Tailwind classes and dead code.
+- [ ] **Resize Test**: Ensure smooth reflow and zero hydration errors.
+- [ ] **Final Check**: Verify new reusable components work across different parent layouts.

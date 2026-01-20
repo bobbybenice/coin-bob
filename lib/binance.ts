@@ -1,6 +1,6 @@
 import { Asset, Candle, Timeframe } from './types';
 import { WATCHLIST, SYMBOL_MAP } from './constants';
-import { fetchHistoricalData } from '@/lib/services/market';
+import { fetchHistoricalData, fetchHistoricalDataBatch } from '@/lib/services/market';
 import { fetchFuturesDailyStats, fetchFundingRates } from '@/lib/services/futures'; // Import Futures Services
 import { analyzeAsset } from '@/lib/engine/analyzer';
 
@@ -19,13 +19,45 @@ const latestAssets: Asset[] = [];
 
 // 2. Batch Loader for History
 async function fetchHistoryBatch(symbols: string[], timeframe: Timeframe) {
-    // Process in chunks of 5 to avoid browser connection limits
-    const CHUNK_SIZE = 5;
-    for (let i = 0; i < symbols.length; i += CHUNK_SIZE) {
-        const chunk = symbols.slice(i, i + CHUNK_SIZE);
-        await Promise.all(chunk.map(s => fetchHistory(s, timeframe)));
-        // Add slight delay between chunks
-        await new Promise(r => setTimeout(r, 200));
+    // Check which symbols are missing from cache or stale
+    const symbolsToFetch: string[] = [];
+    const now = Date.now();
+
+    symbols.forEach(symbol => {
+        const storageKey = `indicators_${symbol}_${timeframe}`;
+        try {
+            const cached = localStorage.getItem(storageKey);
+            if (cached) {
+                const parsed = JSON.parse(cached);
+                const ageValid = (now - parsed.timestamp) < 5 * 60 * 1000;
+                if (ageValid && parsed.data.length > 0) {
+                    assetHistory[symbol] = parsed.data;
+                    return;
+                }
+            }
+        } catch { /* ignore */ }
+        symbolsToFetch.push(symbol);
+    });
+
+    if (symbolsToFetch.length === 0) return;
+
+    // Call Server Action for Batch
+    try {
+        const batchResults = await fetchHistoricalDataBatch(symbolsToFetch, timeframe, false); // false = spot history for now
+
+        Object.entries(batchResults).forEach(([symbol, history]) => {
+            if (history && history.length > 0) {
+                assetHistory[symbol] = history;
+                safeSetItem(`indicators_${symbol}_${timeframe}`, JSON.stringify({
+                    data: history,
+                    timestamp: now
+                }));
+            } else {
+                if (!assetHistory[symbol]) assetHistory[symbol] = [];
+            }
+        });
+    } catch (e) {
+        console.error("Batch history fetch failed", e);
     }
 }
 

@@ -22,7 +22,7 @@ function BacktestSettings() {
         <div className="relative">
             <button
                 onClick={() => setIsOpen(!isOpen)}
-                className={`p-2 rounded-md transition-colors ${isOpen ? 'bg-muted text-foreground' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}
+                className={`p-2 rounded-md cursor-pointer transition-colors ${isOpen ? 'bg-muted text-foreground' : 'text-muted-foreground hover:bg-zinc-700 hover:text-foreground'}`}
                 title="Backtest Settings"
             >
                 <Settings className="w-4 h-4" />
@@ -31,7 +31,7 @@ function BacktestSettings() {
             {isOpen && (
                 <>
                     <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
-                    <div className="absolute right-0 top-full mt-2 w-64 p-4 bg-card border border-border rounded-lg shadow-xl z-50 animate-in fade-in zoom-in-95 duration-200">
+                    <div className="absolute right-0 top-full mt-2 w-64 p-4 bg-black border border-border rounded-lg shadow-xl z-50 animate-in fade-in zoom-in-95 duration-200">
                         <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3">Settings</h3>
 
                         <div className="space-y-4">
@@ -117,7 +117,7 @@ function BacktestControls() {
             ) : (
                 <button
                     onClick={toggleBacktestMode}
-                    className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-md transition-all font-bold shadow-lg shadow-emerald-900/20 hover:shadow-emerald-900/40"
+                    className="flex items-center gap-2 px-4 py-2 cursor-pointer bg-emerald-600 hover:bg-emerald-500 text-white rounded-md transition-all font-bold shadow-lg shadow-emerald-900/20 hover:shadow-emerald-900/40"
                 >
                     <Play className="w-4 h-4 fill-current" />
                     Run Backtest

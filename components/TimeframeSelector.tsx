@@ -3,6 +3,8 @@
 import { Timeframe } from '@/lib/types';
 import { useUserStore } from '@/lib/store';
 import { Clock } from 'lucide-react';
+import { Button } from './ui/Button';
+import { cn } from '@/lib/utils';
 
 const TIMEFRAMES: Timeframe[] = ['1m', '5m', '1h', '4h', '1d'];
 
@@ -16,19 +18,20 @@ export default function TimeframeSelector() {
             </div>
             <div className="flex bg-muted/50 rounded-md p-0.5 gap-0.5">
                 {TIMEFRAMES.map((tf) => (
-                    <button
+                    <Button
                         key={tf}
+                        variant="ghost"
+                        size="xs"
                         onClick={() => setTimeframe(tf)}
-                        className={`
-                            px-2.5 py-1 text-xs font-bold rounded-sm transition-all cursor-pointer hover:bg-zinc-100 dark:hover:bg-zinc-800
-                            ${settings.timeframe === tf
-                                ? 'bg-background text-emerald-400 shadow-sm ring-1 ring-border'
+                        className={cn(
+                            "font-bold transition-all h-auto py-1",
+                            settings.timeframe === tf
+                                ? 'bg-background text-emerald-400 shadow-sm ring-1 ring-border hover:bg-background'
                                 : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
-                            }
-                        `}
+                        )}
                     >
                         {tf.toUpperCase()}
-                    </button>
+                    </Button>
                 ))}
             </div>
         </div>
