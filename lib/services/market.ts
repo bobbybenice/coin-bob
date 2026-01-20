@@ -93,7 +93,7 @@ export async function fetchHistoricalData(symbol: string, interval: string = '1d
     for (const source of sources) {
         try {
             const res = await fetch(source.url, {
-                headers: { 'User-Agent': 'CoinBob/1.0' },
+                // headers: { 'User-Agent': 'CoinBob/1.0' }, // Removed to bypass WAF
                 cache: 'no-store' // Critical: We use LocalStorage for caching now
             });
             if (!res.ok) continue;

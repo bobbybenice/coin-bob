@@ -1,65 +1,15 @@
 import { Asset, Candle, Timeframe } from './types';
 import { WATCHLIST, SYMBOL_MAP } from './constants';
 import { fetchHistoricalData, fetchHistoricalDataBatch } from '@/lib/services/market';
-import { fetchFuturesDailyStats, fetchFundingRates } from '@/lib/services/futures'; // Import Futures Services
+import { fetchFuturesDailyStats, fetchFundingRates, fetchFuturesKlines } from '@/lib/services/futures';
 import { analyzeAsset } from '@/lib/engine/analyzer';
 
-interface BinanceTicker {
-    s: string;
-    c: string;
-    o: string;
-    h: string;
-    l: string;
-    P: string;
-    v: string;
-}
+// [Helper functions safeSetItem, pruneCache omitted, assuming they are unchanged or I should include them if replace_file_content needs full context or line ranges. 
+// Since I am replacing the top part up to fetchHistoryBatch, I will include imports and the function.]
 
-const assetHistory: Record<string, Candle[]> = {};
-const latestAssets: Asset[] = [];
+// ... (helpers are fine, I'll target fetchHistoryBatch specifically if I can, but imports need update)
 
-// 2. Batch Loader for History
-async function fetchHistoryBatch(symbols: string[], timeframe: Timeframe) {
-    // Check which symbols are missing from cache or stale
-    const symbolsToFetch: string[] = [];
-    const now = Date.now();
-
-    symbols.forEach(symbol => {
-        const storageKey = `indicators_${symbol}_${timeframe}`;
-        try {
-            const cached = localStorage.getItem(storageKey);
-            if (cached) {
-                const parsed = JSON.parse(cached);
-                const ageValid = (now - parsed.timestamp) < 5 * 60 * 1000;
-                if (ageValid && parsed.data.length > 0) {
-                    assetHistory[symbol] = parsed.data;
-                    return;
-                }
-            }
-        } catch { /* ignore */ }
-        symbolsToFetch.push(symbol);
-    });
-
-    if (symbolsToFetch.length === 0) return;
-
-    // Call Server Action for Batch
-    try {
-        const batchResults = await fetchHistoricalDataBatch(symbolsToFetch, timeframe, false); // false = spot history for now
-
-        Object.entries(batchResults).forEach(([symbol, history]) => {
-            if (history && history.length > 0) {
-                assetHistory[symbol] = history;
-                safeSetItem(`indicators_${symbol}_${timeframe}`, JSON.stringify({
-                    data: history,
-                    timestamp: now
-                }));
-            } else {
-                if (!assetHistory[symbol]) assetHistory[symbol] = [];
-            }
-        });
-    } catch (e) {
-        console.error("Batch history fetch failed", e);
-    }
-}
+// Let's replace from Imports down to end of fetchHistoryBatch to be safe and clean.
 
 // Helper to safely set item in LS with pruning if quota exceeded
 function safeSetItem(key: string, value: string) {
@@ -91,10 +41,6 @@ function pruneCache() {
 
     if (keys.length === 0) return;
 
-    // Sort by timestamp (we need to read them to know age, which is expensive but necessary)
-    // Or simpler approach: Just delete random 50% or all of them.
-    // "Smart Cache" implies we shouldn't delete everything. 
-    // Let's decode them and sort by timestamp.
     const items = keys.map(k => {
         try {
             const item = localStorage.getItem(k);
@@ -116,6 +62,82 @@ function pruneCache() {
     }
 }
 
+interface BinanceTicker {
+    s: string;
+    c: string;
+    o: string;
+    h: string;
+    l: string;
+    P: string;
+    v: string;
+}
+
+const assetHistory: Record<string, Candle[]> = {};
+const latestAssets: Asset[] = [];
+
+// 2. Batch Loader for History
+async function fetchHistoryBatch(symbols: string[], timeframe: Timeframe, isFutures: boolean) {
+    // Check which symbols are missing from cache or stale
+    const symbolsToFetch: string[] = [];
+    const now = Date.now();
+
+    symbols.forEach(symbol => {
+        const storageKey = `indicators_${isFutures ? 'F_' : ''}${symbol}_${timeframe}`;
+        try {
+            const cached = localStorage.getItem(storageKey);
+            if (cached) {
+                const parsed = JSON.parse(cached);
+                const ageValid = (now - parsed.timestamp) < 5 * 60 * 1000;
+                if (ageValid && parsed.data.length > 0) {
+                    assetHistory[symbol] = parsed.data;
+                    return;
+                }
+            }
+        } catch { /* ignore */ }
+        symbolsToFetch.push(symbol);
+    });
+
+    if (symbolsToFetch.length === 0) return;
+
+    // Call Server Action or Client Fetch for Batch
+    try {
+        let batchResults: Record<string, Candle[]> = {};
+
+        if (isFutures) {
+            // Client-side loop for Futures (No Batch Endpoint, but parallel fetch is fine here)
+            // Limit concurrency? 50 symbols might be heavy.
+            // Let's do it in chunks of 5
+            const CHUCK_SIZE = 5;
+            for (let i = 0; i < symbolsToFetch.length; i += CHUCK_SIZE) {
+                const chunk = symbolsToFetch.slice(i, i + CHUCK_SIZE);
+                await Promise.all(chunk.map(async (sym) => {
+                    const klines = await fetchFuturesKlines(sym, timeframe, 100); // 100 limit enough for indicators
+                    if (klines.length > 0) {
+                        batchResults[sym] = klines;
+                    }
+                }));
+            }
+        } else {
+            // Server Action for Spot (Batched)
+            batchResults = await fetchHistoricalDataBatch(symbolsToFetch, timeframe, false);
+        }
+
+        Object.entries(batchResults).forEach(([symbol, history]) => {
+            if (history && history.length > 0) {
+                assetHistory[symbol] = history;
+                safeSetItem(`indicators_${isFutures ? 'F_' : ''}${symbol}_${timeframe}`, JSON.stringify({
+                    data: history,
+                    timestamp: now
+                }));
+            } else {
+                if (!assetHistory[symbol]) assetHistory[symbol] = [];
+            }
+        });
+    } catch (e) {
+        console.error("Batch history fetch failed", e);
+    }
+}
+
 export async function fetchHistory(symbol: string, timeframe: Timeframe) {
     // 1. Try LocalStorage first
     const storageKey = `indicators_${symbol}_${timeframe}`;
@@ -123,14 +145,6 @@ export async function fetchHistory(symbol: string, timeframe: Timeframe) {
         const cached = localStorage.getItem(storageKey);
         if (cached) {
             const parsed: { data: Candle[], timestamp: number } = JSON.parse(cached);
-            // Validity check: 15 minutes cache for candles might be okay for 1d, but for 1m it's too stale.
-            // Actually, for "technical data", the prompt says: "When switching timeframe, immediately re-fetch/update".
-            // But also: "Prioritize existing data in LocalStorage if it's within the valid time-window."
-            // Let's define valid window: 5 minutes? Or just if we have it, use it, and maybe background refresh.
-            // Prompt says: "High Refresh ... immediately re-fetch... Isolation: Store...".
-            // Prompt 4: "Always prioritize existing data in LocalStorage if it's within the valid time-window."
-
-            // Let's use a 5-minute validity window for now to prevent spamming API on rapid switches
             const ageValid = (Date.now() - parsed.timestamp) < 5 * 60 * 1000;
             if (ageValid && parsed.data.length > 0) {
                 assetHistory[symbol] = parsed.data;
@@ -143,6 +157,7 @@ export async function fetchHistory(symbol: string, timeframe: Timeframe) {
 
     // 2. Fetch from API if cache miss or stale
     try {
+        // Defaults to Spot history
         const history = await fetchHistoricalData(symbol, timeframe);
         if (history && history.length > 0) {
             assetHistory[symbol] = history;
@@ -169,15 +184,12 @@ export function subscribeToBinanceStream(timeframe: Timeframe, isFuturesMode: bo
     if (activeTimeframe !== timeframe || activeFuturesMode !== isFuturesMode) {
         activeTimeframe = timeframe;
         activeFuturesMode = isFuturesMode;
-
-        // fetchHistory currently only does Spot. We need to update it?
-        // Actually for now let's keep History as "Candules" source. 
-        // If isFuturesMode, we might want to fetch Futures Candles.
-        fetchHistoryBatch(WATCHLIST, timeframe);
+        // Fetch history for Spot or Futures
+        fetchHistoryBatch(WATCHLIST, timeframe, isFuturesMode);
     }
 
-    // SPOT MODE: Use WebSocket as before
     if (!isFuturesMode) {
+        // SPOT MODE: Use WebSocket
         const ws = new WebSocket('wss://stream.binance.com:9443/ws/!ticker@arr');
         let hasUpdates = false;
 
@@ -218,13 +230,12 @@ export function subscribeToBinanceStream(timeframe: Timeframe, isFuturesMode: bo
                         // Indicators & Strategies via Engine
                         const analysis = analyzeAsset(history);
 
-                        // Bob Score Integration (add ticker-specific score)
+                        // Bob Score Integration
                         let score = analysis.score;
                         const change24h = parseFloat(t.P);
                         if (change24h > 5) score += 10;
                         score = Math.min(100, Math.max(0, score));
 
-                        // Map Engine Output to Legacy Asset Structure for UI Compatibility
                         const ictMetadata = analysis.strategies.ict.metadata as {
                             sweep?: string;
                             fvg?: string;
@@ -263,7 +274,6 @@ export function subscribeToBinanceStream(timeframe: Timeframe, isFuturesMode: bo
                             macd: analysis.indicators.macd.value,
                             bb: analysis.indicators.bb.value,
                             ictAnalysis: ictAnalysis
-
                         };
 
                         if (existingIndex >= 0) {
@@ -293,10 +303,9 @@ export function subscribeToBinanceStream(timeframe: Timeframe, isFuturesMode: bo
             ws.onerror = null;
             ws.close();
         };
+
     } else {
-        // PERPS MODE: Polling (since WS for perps requires separate connection management, let's start with polling for simplicity)
-        // Or better: Fetch immediately then poll.
-        // We will fetch Ticker + Funding + OI
+        // PERPS MODE: Polling
         let isRunning = true;
 
         const fetchFuturesData = async () => {
@@ -325,26 +334,39 @@ export function subscribeToBinanceStream(timeframe: Timeframe, isFuturesMode: bo
                     const funding = fundingMap.get(t.symbol);
                     const fRate = funding ? parseFloat(funding.rate) * 100 : 0; // Convert to %
 
-                    // We don't have perps historical candles yet in creating this loop, 
-                    // so Technical Indicators (RSI) might be stale or from Spot history?
-                    // Ideally we should use Futures Klines. 
-                    // For MVP: Use Spot History for RSI or skipping it?
-                    // Let's reuse Spot History for now as 'good enough' proxy for indicators, 
-                    // but use Futures Price for display.
+                    // Get History for Indicators (Futures History)
+                    // Note: symbol might need to be adjusted if assetHistory keys differ
+                    if (!assetHistory[cleanSymbol] && !assetHistory[t.symbol]) assetHistory[cleanSymbol] = [];
+                    const history = assetHistory[t.symbol] || assetHistory[cleanSymbol] || [];
 
+                    // Indicators & Strategies via Engine
+                    const analysis = analyzeAsset(history);
 
-                    // User said "calculations are ruined". If we have NO data, we shouldn't guess 50.
-                    // But score is 0-100. 
-                    // Let's set bobScore to 50 but RSI to NaN. 
-                    // Actually, if rsi is NaN, the UI shows '-' for RSI.
-                    // The UI for BobScore handles numbers. 
-                    // Let's set BobScore to 50 (Neutral) for now, as NaN might break sorting too much?
-                    // Wait, Step 52 UI change:
-                    // <div className={`... ${asset.bobScore > 80 ... }`}> {asset.bobScore.toFixed(0)} </div>
-                    // If NaN, toFixed(0) is "NaN".
-                    // Let's set it to 50 for now to keep the UI from looking broken, but RSI to NaN. 
-                    // Actually, let's look at the implementation plan again. "Bob Score remains Neutral (50)".
-                    // Okay, I will keep score=50 but RSI=NaN.
+                    // Bob Score Integration
+                    let score = analysis.score;
+                    const change24h = parseFloat(t.priceChangePercent);
+                    if (change24h > 5) score += 10;
+                    score = Math.min(100, Math.max(0, score));
+
+                    const ictMetadata = analysis.strategies.ict.metadata as {
+                        sweep?: string;
+                        fvg?: string;
+                        killzone?: 'LONDON' | 'NEW_YORK';
+                        isHighProbability?: boolean;
+                    };
+
+                    let oldSignal: 'NONE' | 'BULLISH_SWEEP' | 'BEARISH_SWEEP' | 'BULLISH_FVG' | 'BEARISH_FVG' = 'NONE';
+                    if (ictMetadata?.sweep === 'BULLISH') oldSignal = 'BULLISH_SWEEP';
+                    else if (ictMetadata?.sweep === 'BEARISH') oldSignal = 'BEARISH_SWEEP';
+                    else if (ictMetadata?.fvg === 'BULLISH') oldSignal = 'BULLISH_FVG';
+                    else if (ictMetadata?.fvg === 'BEARISH') oldSignal = 'BEARISH_FVG';
+
+                    const ictAnalysis = {
+                        signal: oldSignal,
+                        fvg: ictMetadata?.fvg ? { type: ictMetadata.fvg as 'BULLISH' | 'BEARISH' } : undefined,
+                        killzone: ictMetadata?.killzone,
+                        isHighProbability: ictMetadata?.isHighProbability || false
+                    };
 
                     newAssets.push({
                         id: info.id,
@@ -353,27 +375,31 @@ export function subscribeToBinanceStream(timeframe: Timeframe, isFuturesMode: bo
                         price: price,
                         change24h: parseFloat(t.priceChangePercent),
                         volume24h: parseFloat(t.quoteVolume),
-                        marketCap: 0, // Not applicable for perps
-                        rsi: NaN, // Explicitly No Data
-                        bobScore: 50, // Default Neutral
-                        ema20: NaN,
-                        ema50: NaN,
-                        ema200: NaN,
-                        macd: { MACD: NaN, signal: NaN, histogram: NaN },
-                        bb: { middle: NaN, upper: NaN, lower: NaN },
+                        marketCap: 0,
+                        rsi: analysis.indicators.rsi.value,
+                        bobScore: score, // DYNAMIC SCORE
+                        ema20: analysis.indicators.ema20.value,
+                        ema50: analysis.indicators.ema50.value,
+                        ema200: analysis.indicators.ema200.value,
+                        macd: analysis.indicators.macd.value,
+                        bb: analysis.indicators.bb.value,
+                        ictAnalysis: ictAnalysis,
                         isPerpetual: true,
                         fundingRate: fRate,
-                        openInterest: 0, // We'll need separate fetch if we want it here, or load lazily
+                        openInterest: 0,
                         nextFundingTime: funding?.nextTime
                     });
                 }
             }
 
+            // Order by BobScore desc
+            newAssets.sort((a, b) => b.bobScore - a.bobScore);
+
             callback(newAssets);
         };
 
         fetchFuturesData();
-        const interval = setInterval(fetchFuturesData, 5000); // 5s poll for Futures (API limit friendly)
+        const interval = setInterval(fetchFuturesData, 5000);
 
         return () => {
             isRunning = false;
