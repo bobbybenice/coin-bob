@@ -31,15 +31,19 @@ export async function optimizeStrategy(candles: Candle[]): Promise<OptimizationR
                         rsiPeriod: period,
                         mfiPeriod: period, // Sync MFI period for now
                         oversold,
-                        overbought,
-                        enableSoftExit
+                        overbought
                     };
 
                     // Create Wrapper Strategy
                     const strategy = (c: Candle[]) => strategyRSIMFI(c, params);
 
                     // Run Simulation
-                    const result = runBacktest(strategy, candles);
+                    const result = runBacktest(strategy, candles, {
+                        initialBalance: 10000,
+                        stopLossPercent: 2,
+                        riskRewardRatio: 2,
+                        enableSoftExits: enableSoftExit
+                    });
 
                     // Calculate Score (Adjusted for Statistical Significance)
                     const roiPercent = (result.pnl / 10000) * 100;

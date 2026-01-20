@@ -165,6 +165,7 @@ export function ChartInstance({
         if (candleSeriesRef.current && candles.length > 0 && chartRef.current && !isLoading) {
             chartRef.current.timeScale().fitContent();
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isLoading, symbol, timeframe]); // Re-fit when symbol/timeframe changes and finishes loading
 
     // Update markers using createSeriesMarkers
@@ -226,7 +227,7 @@ export function ChartInstance({
         const fvgData = Array.from(zoneMap.values()).sort((a, b) => (a.time as number) - (b.time as number));
         fvgSeriesRef.current.setData(fvgData);
 
-    }, [activeZones, candles, chartRef.current]);
+    }, [activeZones, candles]);
 
     // Reset zoom when chartCount changes
     useEffect(() => {
