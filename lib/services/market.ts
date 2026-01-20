@@ -45,20 +45,23 @@ export async function fetchHistoricalData(symbol: string, interval: string = '1d
             name: 'Coinbase Public',
             url: (() => {
                 // Map interval to Coinbase granularity
-                const granularityMap: Record<string, number> = {
+                const granularityMap: Record<string, number | undefined> = {
                     '1m': 60,
                     '5m': 300,
                     '15m': 900,
+                    '30m': undefined, // Not supported by Coinbase
                     '1h': 3600,
-                    '4h': 21600, // 6h closest, or calculate manually. Coinbase supports 1m, 5m, 15m, 1h, 6h, 1d
+                    '2h': undefined, // Not supported by Coinbase
+                    '4h': 21600, // Using 6h (21600) as closest approx, or better undefined? Stick to 6h for 4h?
                     '1d': 86400
                 };
 
                 // Handle symbol mapping (BCHUSDT -> BCH-USD)
-                // Remove USDT/USDC suffix and append -USD
                 const baseSymbol = symbol.replace(/USDT$|USDC$/, '') + '-USD';
 
-                const granularity = granularityMap[interval] || 900;
+                const granularity = granularityMap[interval];
+                if (!granularity) return ''; // Invalid URL will fail fetch gracefully
+
                 return `https://api.exchange.coinbase.com/products/${baseSymbol}/candles?granularity=${granularity}`;
             })(),
             adapter: (json: any): Candle[] => {

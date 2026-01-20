@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { Candle, StrategyName } from '@/lib/types';
+import { Candle, StrategyName, ActiveZone } from '@/lib/types';
 import { executeStrategy } from '@/lib/engine/strategies';
 import type { SeriesMarker, Time } from 'lightweight-charts';
 
@@ -9,11 +9,11 @@ import type { SeriesMarker, Time } from 'lightweight-charts';
 export function useStrategyMarkers(
     candles: Candle[],
     strategyName: StrategyName | null
-): { markers: SeriesMarker<Time>[]; strategyStatus: string } {
+): { markers: SeriesMarker<Time>[]; strategyStatus: string; activeZones: ActiveZone[] } {
 
     return useMemo(() => {
         if (!strategyName || candles.length === 0) {
-            return { markers: [], strategyStatus: 'IDLE' };
+            return { markers: [], strategyStatus: 'IDLE', activeZones: [] };
         }
 
         const markers: SeriesMarker<Time>[] = [];
@@ -65,7 +65,8 @@ export function useStrategyMarkers(
         // Get final strategy status from last candle
         const finalResult = executeStrategy(strategyName, candles);
         const statusText = finalResult.reason || finalResult.status;
+        const activeZones = (finalResult.metadata?.activeZones || []) as ActiveZone[];
 
-        return { markers, strategyStatus: statusText };
+        return { markers, strategyStatus: statusText, activeZones };
     }, [candles, strategyName]);
 }

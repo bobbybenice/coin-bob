@@ -21,7 +21,10 @@ function convertTimeframe(tf: Timeframe): string {
     const map: Record<Timeframe, string> = {
         '1m': '1m',
         '5m': '5m',
+        '15m': '15m',
+        '30m': '30m',
         '1h': '1h',
+        '2h': '2h',
         '4h': '4h',
         '1d': '1d'
     };
@@ -113,6 +116,45 @@ export function useChartData(symbol: string, timeframe: Timeframe, isFutures: bo
             }
         };
 
+        // Buffer for throttling updates
+        let pendingCandle: Candle | null = null;
+        let throttleTimer: NodeJS.Timeout | null = null;
+
+        const flushBuffer = () => {
+            if (!pendingCandle || !isMounted) return;
+
+            const bufferedCandle = pendingCandle;
+
+            setCandles(prev => {
+                if (prev.length === 0) return [bufferedCandle];
+                const lastCandle = prev[prev.length - 1];
+
+                // Check if it's an update to the current candle
+                if (lastCandle.time === bufferedCandle.time) {
+                    // Only update if something changed (optimization)
+                    if (lastCandle.close === bufferedCandle.close &&
+                        lastCandle.volume === bufferedCandle.volume &&
+                        lastCandle.high === bufferedCandle.high &&
+                        lastCandle.low === bufferedCandle.low) {
+                        return prev;
+                    }
+
+                    const newCandles = [...prev];
+                    newCandles[prev.length - 1] = bufferedCandle;
+                    return newCandles;
+                }
+
+                // New candle started
+                if (bufferedCandle.time > lastCandle.time) {
+                    return [...prev, bufferedCandle];
+                }
+
+                return prev;
+            });
+            pendingCandle = null;
+            throttleTimer = null;
+        };
+
         fetchData().then(() => {
             if (!isMounted) return;
 
@@ -135,24 +177,13 @@ export function useChartData(symbol: string, timeframe: Timeframe, isFutures: bo
                         volume: parseFloat(k.v)
                     };
 
-                    setCandles(prev => {
-                        if (prev.length === 0) return [newCandle];
-                        const lastCandle = prev[prev.length - 1];
+                    // Update local buffer
+                    pendingCandle = newCandle;
 
-                        // If update to current candle
-                        if (lastCandle.time === newCandle.time) {
-                            const newCandles = [...prev];
-                            newCandles[prev.length - 1] = newCandle;
-                            return newCandles;
-                        }
-
-                        // If new candle started
-                        if (newCandle.time > lastCandle.time) {
-                            return [...prev, newCandle];
-                        }
-
-                        return prev;
-                    });
+                    // Schedule flush if not already scheduled
+                    if (!throttleTimer) {
+                        throttleTimer = setTimeout(flushBuffer, 200); // 200ms throttle
+                    }
                 }
             };
 
@@ -164,6 +195,7 @@ export function useChartData(symbol: string, timeframe: Timeframe, isFutures: bo
         return () => {
             isMounted = false;
             if (ws) ws.close();
+            if (throttleTimer) clearTimeout(throttleTimer);
         };
     }, [symbol, timeframe, limit, isFutures]);
 

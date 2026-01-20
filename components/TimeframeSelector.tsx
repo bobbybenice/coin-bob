@@ -6,7 +6,7 @@ import { Clock } from 'lucide-react';
 import { Button } from './ui/Button';
 import { cn } from '@/lib/utils';
 
-const TIMEFRAMES: Timeframe[] = ['1m', '5m', '1h', '4h', '1d'];
+const TIMEFRAMES: Timeframe[] = ['1m', '5m', '15m', '30m', '1h', '2h', '4h', '1d'];
 
 export default function TimeframeSelector() {
     const { settings, setTimeframe } = useUserStore();

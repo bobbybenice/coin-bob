@@ -180,6 +180,54 @@ export function ChartInstance({
         }
     }, [candles, markers]);
 
+    // FVG Visualization Layer
+    const { activeZones } = useStrategyMarkers(candles, selectedStrategy);
+    const fvgSeriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null);
+
+    useEffect(() => {
+        if (!chartRef.current || !activeZones || candles.length === 0) return;
+
+        // Initialize Series if needed
+        if (!fvgSeriesRef.current) {
+            fvgSeriesRef.current = chartRef.current.addSeries(CandlestickSeries, {
+                upColor: 'rgba(34, 197, 94, 0.15)', // Smooth Green
+                downColor: 'rgba(239, 68, 68, 0.15)', // Smooth Red
+                borderVisible: false, // Critical fix: Remove grid effect
+                wickVisible: false,
+            });
+        }
+
+        // Project Zones Forward
+        // We iterate and map time -> closest zone (most recent)
+        const zoneMap = new Map<number, CandlestickData>();
+        const lastCandleTime = candles[candles.length - 1]?.time / 1000;
+
+        activeZones.forEach(zone => {
+            const startTime = zone.start / 1000;
+            const endTime = zone.end ? zone.end / 1000 : lastCandleTime;
+
+            candles.forEach(c => {
+                const t = c.time / 1000;
+                if (t >= startTime && t <= endTime) {
+                    // Logic: Overwrite with this zone.
+                    // This creates a "Solid" strip. 
+                    zoneMap.set(t, {
+                        time: t as Time,
+                        open: zone.top,
+                        high: zone.top,
+                        low: zone.bottom,
+                        close: zone.bottom,
+                        color: zone.type === 'BULLISH' ? 'rgba(34, 197, 94, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+                    });
+                }
+            });
+        });
+
+        const fvgData = Array.from(zoneMap.values()).sort((a, b) => (a.time as number) - (b.time as number));
+        fvgSeriesRef.current.setData(fvgData);
+
+    }, [activeZones, candles, chartRef.current]);
+
     // Reset zoom when chartCount changes
     useEffect(() => {
         if (onZoomReset > 0 && chartRef.current) {
@@ -202,7 +250,10 @@ export function ChartInstance({
                     >
                         <option value="1m">1m</option>
                         <option value="5m">5m</option>
+                        <option value="15m">15m</option>
+                        <option value="30m">30m</option>
                         <option value="1h">1h</option>
+                        <option value="2h">2h</option>
                         <option value="4h">4h</option>
                         <option value="1d">1d</option>
                     </select>

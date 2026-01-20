@@ -5,6 +5,9 @@ import { strategyMACDDivergence } from './macd-divergence';
 import { strategyEMACrossover } from './ema-crossover';
 import { strategyVolumeBreakout } from './volume-breakout';
 import { strategySupportResistance } from './support-resistance';
+import { strategyGolden } from './golden-strategy';
+import { strategyICT } from './ict';
+
 
 export type StrategyName =
     | 'RSI_MFI'
@@ -12,7 +15,9 @@ export type StrategyName =
     | 'MACD_DIVERGENCE'
     | 'EMA_CROSSOVER'
     | 'VOLUME_BREAKOUT'
-    | 'SUPPORT_RESISTANCE';
+    | 'SUPPORT_RESISTANCE'
+    | 'GOLDEN_STRATEGY'
+    | 'ICT';
 
 export interface StrategyConfig {
     name: StrategyName;
@@ -36,8 +41,7 @@ export const STRATEGIES: Record<StrategyName, StrategyConfig> = {
             rsiPeriod: 14,
             mfiPeriod: 14,
             oversold: 30,
-            overbought: 70,
-            enableSoftExit: false
+            overbought: 70
         }
     },
     BOLLINGER_BOUNCE: {
@@ -50,8 +54,7 @@ export const STRATEGIES: Record<StrategyName, StrategyConfig> = {
             bbStdDev: 2,
             rsiPeriod: 14,
             rsiOversold: 30,
-            rsiOverbought: 70,
-            enableSoftExit: false
+            rsiOverbought: 70
         }
     },
     MACD_DIVERGENCE: {
@@ -100,6 +103,34 @@ export const STRATEGIES: Record<StrategyName, StrategyConfig> = {
             levelTolerance: 0.005,
             minTouches: 2
         }
+
+
+    },
+    GOLDEN_STRATEGY: {
+        name: 'GOLDEN_STRATEGY',
+        displayName: 'Golden Strategy (Trend Pullback)',
+        description: 'High-probability trend pullback system (EMA + BB + ATR)',
+        execute: strategyGolden,
+        defaultOptions: {
+            trendEmaPeriod: 200,
+            fastEmaPeriod: 50,
+            bbPeriod: 20,
+            bbStdDev: 2,
+            rsiPeriod: 14,
+            rsiOversold: 40,
+            rsiOverbought: 60,
+            atrPeriod: 14,
+            adxPeriod: 14,
+            minAdx: 25,
+            riskRewardRatio: 2
+        }
+    },
+    ICT: {
+        name: 'ICT',
+        displayName: 'ICT / SMC (Smart Money)',
+        description: 'Gap detection (FVG) and Liquidity Sweep logic',
+        execute: strategyICT,
+        defaultOptions: {}
     }
 };
 
@@ -149,5 +180,7 @@ export {
     strategyMACDDivergence,
     strategyEMACrossover,
     strategyVolumeBreakout,
-    strategySupportResistance
+    strategySupportResistance,
+    strategyGolden,
+    strategyICT
 };

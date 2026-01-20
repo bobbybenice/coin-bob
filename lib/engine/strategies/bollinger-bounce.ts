@@ -8,7 +8,6 @@ export interface BollingerBounceOptions {
     rsiPeriod?: number;
     rsiOversold?: number;
     rsiOverbought?: number;
-    enableSoftExit?: boolean;
 }
 
 /**
@@ -28,8 +27,7 @@ export function strategyBollingerBounce(candles: Candle[], options: BollingerBou
         bbStdDev = 2,
         rsiPeriod = 14,
         rsiOversold = 30,
-        rsiOverbought = 70,
-        enableSoftExit = false
+        rsiOverbought = 70
     } = options;
 
     const bb = calculateBollingerBands(candles, bbPeriod, bbStdDev);
@@ -89,10 +87,6 @@ export function strategyBollingerBounce(candles: Candle[], options: BollingerBou
         // Approaching short setup
         status = 'WATCH';
         reason = `Approaching Upper Band: ${distanceToUpper.toFixed(1)}% away, RSI ${rsiValue.toFixed(1)}`;
-    } else if (enableSoftExit && Math.abs(current.close - middle) / current.close < 0.005) {
-        // Soft exit: price reached middle band (within 0.5%)
-        status = 'EXIT';
-        reason = `Target Reached: Price at middle band ($${middle.toFixed(2)})`;
     }
 
     return {

@@ -9,6 +9,15 @@ export interface Candle {
 
 export type ICTSignal = 'BULLISH_SWEEP' | 'BEARISH_SWEEP' | 'BULLISH_FVG' | 'BEARISH_FVG' | 'NONE';
 
+export interface ActiveZone {
+    top: number;
+    bottom: number;
+    start: number; // timestamp
+    end?: number; // timestamp (if mitigated) or Infinity/future
+    type: 'BULLISH' | 'BEARISH';
+    mitigated: boolean;
+}
+
 export interface ICTAnalysis {
     signal: ICTSignal;
     fvg?: {
@@ -16,6 +25,7 @@ export interface ICTAnalysis {
         bottom?: number;
         type: 'BULLISH' | 'BEARISH';
     };
+    activeZones?: ActiveZone[];
     killzone?: 'LONDON' | 'NEW_YORK';
     isHighProbability: boolean;
 }
@@ -100,6 +110,27 @@ export interface NewsItem {
     score: number;
 }
 
+export interface StrategyResponse {
+    status: 'ENTRY' | 'EXIT' | 'HOLD' | 'WAIT' | 'IDLE' | 'WATCH';
+    priceLevels: {
+        entry?: number;
+        stopLoss?: number;
+        takeProfit?: number;
+    };
+    reason: string;
+    metadata?: {
+        ema?: number;
+        rsi?: number;
+        atr?: number;
+        killzone?: string;
+        side?: 'LONG' | 'SHORT';
+        isHighProbability?: boolean;
+        sweep?: 'BULLISH' | 'BEARISH' | null;
+        fvg?: 'BULLISH' | 'BEARISH' | null;
+        activeZones?: ActiveZone[];
+    };
+}
+
 export interface WhaleTransaction {
     id: string;
     blockchain: string;
@@ -122,7 +153,7 @@ export interface WhaleTransaction {
     transaction_count: number;
 }
 
-export type Timeframe = '1m' | '5m' | '1h' | '4h' | '1d';
+export type Timeframe = '1m' | '5m' | '15m' | '30m' | '1h' | '2h' | '4h' | '1d';
 
 export type TrendDirection = 'UP' | 'DOWN' | 'NEUTRAL';
 
@@ -145,7 +176,9 @@ export type StrategyName =
     | 'MACD_DIVERGENCE'
     | 'EMA_CROSSOVER'
     | 'VOLUME_BREAKOUT'
-    | 'SUPPORT_RESISTANCE';
+    | 'SUPPORT_RESISTANCE'
+    | 'GOLDEN_STRATEGY'
+    | 'ICT';
 
 export interface ChartMarker {
     time: number;

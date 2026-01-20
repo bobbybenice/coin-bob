@@ -7,7 +7,6 @@ export interface RSIMFIOptions {
     mfiPeriod?: number;
     oversold?: number;
     overbought?: number;
-    enableSoftExit?: boolean;
 }
 
 export function strategyRSIMFI(candles: Candle[], options: RSIMFIOptions = {}): StrategyResponse {
@@ -15,8 +14,7 @@ export function strategyRSIMFI(candles: Candle[], options: RSIMFIOptions = {}): 
         rsiPeriod = 14,
         mfiPeriod = 14,
         oversold = 30,
-        overbought = 70,
-        enableSoftExit = false
+        overbought = 70
     } = options;
 
     const rsi = calculateRSI(candles, rsiPeriod);
@@ -56,10 +54,6 @@ export function strategyRSIMFI(candles: Candle[], options: RSIMFIOptions = {}): 
 
         stopLoss = current.close * 1.03; // 3% SL
         takeProfit = current.close * 0.94; // 6% TP
-    } else if (enableSoftExit && rsi.value > 45 && rsi.value < 55) {
-        // Soft Exit: Mean Reversion
-        status = 'EXIT';
-        reason = `Mean Reversion Target Met (RSI ${rsi.value.toFixed(2)})`;
     }
 
     return {
