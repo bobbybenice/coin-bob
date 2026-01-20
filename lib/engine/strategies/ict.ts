@@ -1,4 +1,5 @@
-import { Candle, StrategyResponse, ActiveZone } from '../types';
+import { Candle, StrategyResponse } from '../types';
+import { ActiveZone } from '@/lib/types';
 import { DateTime } from 'luxon';
 
 // Helper to check if a time is within a Killzone (EST)
