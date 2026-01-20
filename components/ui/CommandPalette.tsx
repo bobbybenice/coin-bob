@@ -11,28 +11,38 @@ interface CommandPaletteProps {
     assets: Asset[];
     isOpen: boolean;
     onClose: () => void;
+    currentQuery?: string;
+    onQueryChange?: (query: string) => void;
+    onSearch?: (query: string) => void;
+    onClear?: () => void;
 }
 
-export default function CommandPalette({ assets, isOpen, onClose }: CommandPaletteProps) {
+export default function CommandPalette({ assets, isOpen, onClose, currentQuery, onQueryChange, onSearch, onClear }: CommandPaletteProps) {
     const router = useRouter();
-    const [searchQuery, setSearchQuery] = useState('');
+    const [searchQuery, setSearchQuery] = useState(currentQuery || '');
     const searchInputRef = useRef<HTMLInputElement>(null);
 
-    // Focus input when search opens
+    // Sync with external query
+    useEffect(() => {
+        if (isOpen) {
+            setSearchQuery(currentQuery || '');
+        }
+    }, [isOpen, currentQuery]);
+
+    // Focus AND Select input when search opens (Solves "Append to previous" issue)
     useEffect(() => {
         if (isOpen && searchInputRef.current) {
             searchInputRef.current.focus();
+            searchInputRef.current.select(); // Select all text so typing replaces it
         }
     }, [isOpen]);
 
-    // Clear query when closed
+    // Clear internal query when closed
     useEffect(() => {
-        if (!isOpen) {
-            setSearchQuery('');
-        }
+        // No-op
     }, [isOpen]);
 
-    // Filter Assets
+    // Filter Assets (Locally for the list, parent handles table filter via onQueryChange)
     const searchResults = useMemo(() => {
         if (!searchQuery) return [];
         const query = searchQuery.toLowerCase();
@@ -40,13 +50,12 @@ export default function CommandPalette({ assets, isOpen, onClose }: CommandPalet
             asset.symbol.toLowerCase().includes(query) ||
             asset.name.toLowerCase().includes(query)
         ).sort((a, b) => {
-            // Prioritize exact symbol matches or startsWith
             const aStarts = a.symbol.toLowerCase().startsWith(query);
-            b.symbol.toLowerCase().startsWith(query);
-            if (aStarts && !b.symbol.toLowerCase().startsWith(query)) return -1;
-            if (!aStarts && b.symbol.toLowerCase().startsWith(query)) return 1;
+            const bStarts = b.symbol.toLowerCase().startsWith(query);
+            if (aStarts && !bStarts) return -1;
+            if (!aStarts && bStarts) return 1;
             return 0;
-        }).slice(0, 7); // Limit results for clean UI
+        }).slice(0, 7);
     }, [assets, searchQuery]);
 
     if (!isOpen) return null;
@@ -63,11 +72,24 @@ export default function CommandPalette({ assets, isOpen, onClose }: CommandPalet
                         ref={searchInputRef}
                         type="text"
                         value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
+                        onChange={(e) => {
+                            const val = e.target.value;
+                            setSearchQuery(val);
+                            if (onQueryChange) onQueryChange(val); // Real-time sync
+                        }}
                         placeholder="Type to search symbol..."
                         className="h-12 pl-11 pr-12 border-none focus-visible:ring-0 rounded-none shadow-none"
                         onKeyDown={(e) => {
-                            if (e.key === 'Escape') onClose();
+                            if (e.key === 'Escape') {
+                                if (onClear) onClear(); // If user escapes via Input, clear filter?
+                                // "Hitting Escape should reset the search query and display all assets again."
+                                onClose();
+                            }
+                            if (e.key === 'Enter') {
+                                if (onSearch) {
+                                    onSearch(searchQuery);
+                                }
+                            }
                         }}
                     />
                     <Button

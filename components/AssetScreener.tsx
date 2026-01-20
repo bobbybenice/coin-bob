@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useMarketData } from '@/lib/hooks/useMarketData';
 import { useUserStore, useTrendsStore } from '@/lib/store';
 import { Search } from 'lucide-react';
@@ -28,12 +28,48 @@ export default function AssetScreener() {
 
   // Command Palette State
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Global Keydown Listener for "Type to Search" and Escape
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // 1. Escape: Reset search if not in modal (modal handles its own escape)
+      if (e.key === 'Escape' && !isSearchOpen) {
+        setSearchQuery('');
+        return;
+      }
+
+      // 2. Type to Search (if Not in Input)
+      if (
+        !isSearchOpen &&
+        e.key.length === 1 &&
+        !e.ctrlKey &&
+        !e.metaKey &&
+        !e.altKey &&
+        !['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement).tagName)
+      ) {
+        setSearchQuery(e.key); // Capture first char and reset previous query
+        setIsSearchOpen(true);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isSearchOpen]);
 
   // Main Table Filter
   const filteredAssets = useMemo(() => {
     if (!isLoaded) return [];
 
     return assets.filter(asset => {
+      // 0. Text Search
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase();
+        if (!asset.symbol.toLowerCase().includes(query) && !asset.name.toLowerCase().includes(query)) {
+          return false;
+        }
+      }
+
       // 1. Favorites Only
       if (settings.filters.favoritesOnly && !settings.favorites.includes(asset.id)) {
         return false;
@@ -80,7 +116,7 @@ export default function AssetScreener() {
         ? (aValue as number) - (bValue as number)
         : (bValue as number) - (aValue as number);
     });
-  }, [settings, sortField, sortDir, isLoaded, assets]);
+  }, [settings, sortField, sortDir, isLoaded, assets, searchQuery]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -287,6 +323,13 @@ export default function AssetScreener() {
         assets={assets}
         isOpen={isSearchOpen}
         onClose={() => setIsSearchOpen(false)}
+        currentQuery={searchQuery}
+        onQueryChange={setSearchQuery}
+        onSearch={(query) => {
+          setSearchQuery(query);
+          setIsSearchOpen(false);
+        }}
+        onClear={() => setSearchQuery('')}
       />
     </div >
   );
