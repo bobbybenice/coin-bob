@@ -47,7 +47,7 @@ export async function fetchFuturesDailyStats(): Promise<FuturesTicker[]> {
         try {
             const res = await fetch(`${FAPI_BASE}/fapi/v1/ticker/24hr`, {
                 // cache: 'no-store', // Optional: standard fetch cache control if needed, but defaults are usually fine for real-time
-                headers: { 'User-Agent': 'CoinBob/1.0' }
+                // header moved to default
             });
             if (!res.ok) throw new Error('Failed to fetch futures ticker');
             const data = await res.json();
@@ -79,7 +79,7 @@ export async function fetchFundingRates(): Promise<PremiumIndex[]> {
     fundingPromise = (async () => {
         try {
             const res = await fetch(`${FAPI_BASE}/fapi/v1/premiumIndex`, {
-                headers: { 'User-Agent': 'CoinBob/1.0' }
+                // header moved to default
             });
             if (!res.ok) throw new Error('Failed to fetch funding rates');
             const data = await res.json();
@@ -108,7 +108,7 @@ export async function fetchFundingRates(): Promise<PremiumIndex[]> {
 export async function fetchOpenInterest(symbol: string): Promise<number> {
     try {
         const res = await fetch(`${FAPI_BASE}/fapi/v1/openInterest?symbol=${symbol}`, {
-            headers: { 'User-Agent': 'CoinBob/1.0' }
+            // header moved to default
         });
         if (!res.ok) return 0;
         const data = await res.json();
