@@ -1,4 +1,4 @@
-import { Candle, StrategyResponse } from '../types';
+import { Candle, StrategyResponse } from '../../types';
 import { calculateEMA } from '../indicators/ema';
 
 export interface EMACrossoverOptions {

@@ -1,5 +1,5 @@
 import { RSI, BollingerBands, EMA, ATR, ADX } from 'technicalindicators';
-import { Candle, StrategyResponse } from '../types';
+import { Candle, StrategyResponse } from '../../types';
 
 export interface GoldenStrategyOptions {
     trendEmaPeriod?: number; // Slow EMA (200)

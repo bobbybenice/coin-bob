@@ -1,4 +1,4 @@
-import { Candle, StrategyResponse } from '../types';
+import { Candle, StrategyResponse } from '../../types';
 
 export interface SupportResistanceOptions {
     pivotLookback?: number;
@@ -133,6 +133,7 @@ export function strategySupportResistance(candles: Candle[], options: SupportRes
         if (current.close < resistance.price && recentHigh > resistance.price) {
             if (status === 'IDLE') {
                 status = 'EXIT';
+                side = 'SHORT'; // Rejection at resistance is Bearish
                 reason = `Failed Breakout: Rejected at $${resistance.price.toFixed(2)}`;
             }
         }
@@ -142,6 +143,7 @@ export function strategySupportResistance(candles: Candle[], options: SupportRes
         if (current.close > support.price && recentLow < support.price) {
             if (status === 'IDLE') {
                 status = 'EXIT';
+                side = 'LONG'; // Support held is Bullish
                 reason = `Failed Breakdown: Held at $${support.price.toFixed(2)}`;
             }
         }

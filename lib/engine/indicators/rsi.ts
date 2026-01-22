@@ -1,5 +1,5 @@
 import { RSI } from 'technicalindicators';
-import { Candle, IndicatorResult } from '../types';
+import { Candle, IndicatorResult } from '../../types';
 
 export function calculateRSI(candles: Candle[], period: number = 14): IndicatorResult {
     if (candles.length < period) {

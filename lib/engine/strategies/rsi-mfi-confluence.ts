@@ -1,4 +1,4 @@
-import { Candle, StrategyResponse } from '../types';
+import { Candle, StrategyResponse } from '../../types';
 import { calculateRSI } from '../indicators/rsi';
 import { calculateMFI } from '../indicators/mfi';
 

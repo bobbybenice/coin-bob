@@ -1,5 +1,5 @@
 import { EMA } from 'technicalindicators';
-import { Candle, IndicatorResult } from '../types';
+import { Candle, IndicatorResult } from '../../types';
 
 export function calculateEMA(candles: Candle[], period: number): IndicatorResult {
     if (candles.length < period) {

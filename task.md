@@ -1,0 +1,26 @@
+# Task Checklist
+
+- [x] Improve Asset Screener to EASIER find High probability entries (Long and shorts)
+    - [x] Add "High Probability" Quick Filters (Strong Long > 70, Strong Short < 30)
+    - [x] Add "Signal" column with visual badges (Strong Action/Neutral)
+    - [x] Implement filter logic for maxBobScore (to support Short filtering)
+- [x] Fix MACD Divergence Strategy Markers
+    - [x] Reduce exit marker noise by implementing crossover detection
+- [x] Refine Bob Score Logic
+    - [x] Implement Trend Alignment Cap (cannot trigger STRONG LONG in Bearish Trend)
+    - [x] Align Bob Score with Strategies (Weighted scoring system)
+    - [x] Implement Score Explanation Overlay (Click for breakdown)
+- [x] Screener Cleanup & Noise Reduction
+    - [x] Remove 24H%, Funding, Open Interest, Favorite columns
+    - [x] Implement "No Trigger, No Signal" logic (Requires active trigger for Buy/Sell signal)
+    - [x] Remove Quick Scan filters (User request)
+    - [x] Remove Legacy Trend/RSI/MFI Columns (User request)
+- [x] UI Refinements
+    - [x] Remove asset circle icon
+- [x] Implement Customizable Strategy Columns (User request: All timeframes, all strategies)
+    - [x] Update types (`AssetTrends`, `StrategyName`)
+    - [x] Update store (`visibleStrategies`)
+    - [x] Update `useTrendScanner` for 6 timeframes + strategy execution
+    - [x] Update `AnalysisEngine` with Strategy Selector
+    - [x] Update `AssetScreener` and `AssetRow` for dynamic rendering
+    - [x] Set defaults: RSI/MFI and Bollinger visible by default

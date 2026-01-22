@@ -5,6 +5,7 @@ import { Asset, TrendDirection } from '../types';
 import { useTrendsStore } from '../store';
 import { fetchHistoricalData } from '../services/market';
 import { EMA, RSI } from 'technicalindicators';
+import { executeStrategy, getAllStrategyNames } from '../engine/strategies';
 
 // Helper to calculate trend
 function getTrend(closes: number[]): TrendDirection {
@@ -93,17 +94,17 @@ export function useTrendScanner(assets: Asset[]) {
             if (processingRef.current) return;
             processingRef.current = true;
 
-            try {
-                // Round robin selection
-                if (assets.length === 0) return;
-                const idx = indexRef.current % assets.length;
-                const asset = assets[idx];
-                indexRef.current = (indexRef.current + 1) % assets.length;
+            // Round robin selection
+            if (assets.length === 0) return;
+            const idx = indexRef.current % assets.length;
+            const asset = assets[idx];
+            indexRef.current = (indexRef.current + 1) % assets.length;
 
-                // Check cache validity (15 mins)
+            try {
+                // Check cache validity (5 mins for deep scan)
                 const cached = trends[asset.symbol];
                 const now = Date.now();
-                if (cached && cached.lastUpdated && (now - cached.lastUpdated < 900000)) {
+                if (cached && cached.lastUpdated && (now - cached.lastUpdated < 300000)) {
                     processingRef.current = false;
                     return;
                 }
@@ -111,13 +112,29 @@ export function useTrendScanner(assets: Asset[]) {
                 // Fetch concurrent
                 const symbol = asset.symbol.toUpperCase().endsWith('USDT') ? asset.symbol : `${asset.symbol}USDT`;
 
-                const [h4, h1, m15] = await Promise.all([
+                // Fetch 6 timeframes
+                const [d1, h4, h1, m30, m15, m5] = await Promise.all([
+                    fetchHistoricalData(symbol, '1d'),
                     fetchHistoricalData(symbol, '4h'),
                     fetchHistoricalData(symbol, '1h'),
-                    fetchHistoricalData(symbol, '15m')
+                    fetchHistoricalData(symbol, '30m'),
+                    fetchHistoricalData(symbol, '15m'),
+                    fetchHistoricalData(symbol, '5m')
                 ]);
 
+                // Map results for easy access
+                const tfMap = {
+                    '1d': d1,
+                    '4h': h4,
+                    '1h': h1,
+                    '30m': m30,
+                    '15m': m15,
+                    '5m': m5
+                };
+
+                // Legacy Calcs (for existing screener columns)
                 // Ensure we have enough data (at least 50 candles for stable RSI/EMA)
+                let legacyData: Record<string, unknown> = {};
                 if (h4.length > 50 && h1.length > 50 && m15.length > 50) {
                     const c4h = h4.map(c => c.close);
                     const c1h = h1.map(c => c.close);
@@ -125,7 +142,7 @@ export function useTrendScanner(assets: Asset[]) {
 
                     const t4h = getTrend(c4h);
                     const t1h = getTrend(c1h);
-                    const t15m = getTrend(c15m);
+                    const t15m = getTrend(c15m); // Note: Original code used m15 for trend?
 
                     const rsi4h = getRSI(c4h);
                     const rsi1h = getRSI(c1h);
@@ -135,17 +152,55 @@ export function useTrendScanner(assets: Asset[]) {
                     const mfi1h = getMFI(h1.map(c => c.high), h1.map(c => c.low), c1h, h1.map(c => c.volume));
                     const mfi15m = getMFI(m15.map(c => c.high), m15.map(c => c.low), c15m, m15.map(c => c.volume));
 
-                    updateAssetTrend(asset.symbol, { t4h, t1h, t15m, rsi4h, rsi1h, rsi15m, mfi4h, mfi1h, mfi15m });
+                    legacyData = { t4h, t1h, t15m, rsi4h, rsi1h, rsi15m, mfi4h, mfi1h, mfi15m };
                 }
 
-            } catch {
-                console.error('Failed to parse scan timestamp');
+
+                // Strategy Scan
+                const strategyResults: Record<string, Record<string, 'LONG' | 'SHORT' | null>> = {};
+                const strategies = getAllStrategyNames();
+
+                strategies.forEach(strategyName => {
+                    strategyResults[strategyName] = {}; // Init strategy map
+
+                    Object.entries(tfMap).forEach(([tf, candles]) => {
+                        if (candles.length < 50) return; // Skip if insufficient data
+
+                        // Execute Strategy
+                        const result = executeStrategy(strategyName, candles);
+
+                        // Extract SIGNAL
+                        if (result.status === 'ENTRY') {
+                            const side = result.metadata?.side; // 'LONG' | 'SHORT'
+                            if (side === 'LONG' || side === 'SHORT') {
+                                strategyResults[strategyName][tf] = side;
+                            } else {
+                                // Fallback: some strategies might not set metadata.side explicitly if implied?
+                                // Assuming strategies return valid metadata.side for ENTRY.
+                                // If using Golden Strategy, it sets 'side'.
+                                if (strategyName === 'ICT' && result.metadata?.sweep) {
+                                    strategyResults[strategyName][tf] = result.metadata.sweep === 'BULLISH' ? 'LONG' : 'SHORT';
+                                } else if (strategyName === 'ICT' && result.metadata?.fvg) {
+                                    // FVG is often just a bias, but if Status is ENTRY, treat as signal
+                                    strategyResults[strategyName][tf] = result.metadata.fvg === 'BULLISH' ? 'LONG' : 'SHORT';
+                                }
+                            }
+                        } else {
+                            strategyResults[strategyName][tf] = null;
+                        }
+                    });
+                });
+
+                updateAssetTrend(asset.symbol, { ...legacyData, strategies: strategyResults });
+
+            } catch (e) {
+                console.error('Failed to scan asset', asset.symbol, e);
             } finally {
                 processingRef.current = false;
             }
         };
 
-        const interval = setInterval(processNextAsset, 250); // 4 assets/sec
+        const interval = setInterval(processNextAsset, 1000); // Slower interval due to heavy fetching (1 asset / sec)
         return () => clearInterval(interval);
     }, [assets, trends, updateAssetTrend]);
 }

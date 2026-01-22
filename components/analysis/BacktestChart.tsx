@@ -1,7 +1,7 @@
 'use client';
 
 import { createChart, ColorType, Time, CandlestickSeries, createSeriesMarkers } from 'lightweight-charts';
-import { TradeRecord } from '@/lib/engine/types';
+import { TradeRecord } from '@/lib/types';
 import React, { useEffect, useRef } from 'react';
 import { Candle } from '@/lib/types';
 

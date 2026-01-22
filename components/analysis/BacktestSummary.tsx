@@ -2,7 +2,7 @@
 
 import { Activity } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { BacktestResult } from '@/lib/engine/types';
+import { BacktestResult } from '@/lib/types';
 
 interface BacktestSummaryProps {
     results: BacktestResult | null;

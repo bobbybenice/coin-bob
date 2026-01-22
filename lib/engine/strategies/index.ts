@@ -1,4 +1,4 @@
-import { Candle, StrategyResponse } from '../types';
+import { Candle, StrategyResponse, StrategyName } from '../../types';
 import { strategyRSIMFI } from './rsi-mfi-confluence';
 import { strategyBollingerBounce } from './bollinger-bounce';
 import { strategyMACDDivergence } from './macd-divergence';
@@ -9,15 +9,7 @@ import { strategyGolden } from './golden-strategy';
 import { strategyICT } from './ict';
 
 
-export type StrategyName =
-    | 'RSI_MFI'
-    | 'BOLLINGER_BOUNCE'
-    | 'MACD_DIVERGENCE'
-    | 'EMA_CROSSOVER'
-    | 'VOLUME_BREAKOUT'
-    | 'SUPPORT_RESISTANCE'
-    | 'GOLDEN_STRATEGY'
-    | 'ICT';
+
 
 export interface StrategyConfig {
     name: StrategyName;

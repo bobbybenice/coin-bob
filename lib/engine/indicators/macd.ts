@@ -1,5 +1,5 @@
 import { MACD } from 'technicalindicators';
-import { Candle, IndicatorResult } from '../types';
+import { Candle, IndicatorResult } from '../../types';
 
 interface MACDResult {
     MACD?: number;

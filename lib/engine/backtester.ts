@@ -1,10 +1,10 @@
-import { Candle, StrategyFunction, BacktestResult, TradeRecord } from './types';
+import { Candle, StrategyFunction, BacktestResult, TradeRecord } from '../types';
 
 export interface BacktestOptions {
     initialBalance: number;
     stopLossPercent: number; // e.g. 2.0 = 2%
     riskRewardRatio: number; // e.g. 2.0 = 1:2
-    enableSoftExits: boolean; // true = allow strategy to exit early
+
 }
 
 export function runBacktest(
@@ -14,7 +14,7 @@ export function runBacktest(
         initialBalance: 10000,
         stopLossPercent: 2,
         riskRewardRatio: 2,
-        enableSoftExits: true
+
     }
 ): BacktestResult {
     // Skeleton implementation
@@ -67,9 +67,7 @@ export function runBacktest(
             // Signal Exit (Independent of side, usually)
             // A "Soft Exit" is when the strategy itself signals an exit (e.g. indicator reversal)
             // regardless of whether SL or TP has been hit.
-            if (!exitPrice && options.enableSoftExits && result.status === 'EXIT') {
-                exitPrice = currentCandle.close;
-            }
+
 
             if (exitPrice) {
                 // Fixed Position Size of $1,000 USD per trade

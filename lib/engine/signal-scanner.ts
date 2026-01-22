@@ -1,4 +1,4 @@
-import { Candle, StrategyFunction } from './types';
+import { Candle, StrategyFunction } from '../types';
 
 export interface Signal {
     time: number;

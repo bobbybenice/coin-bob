@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
-import { UserSettings, FilterCriteria, Timeframe, AssetTrends } from './types';
+import { UserSettings, FilterCriteria, Timeframe, AssetTrends, StrategyName } from './types';
 import { BacktestOptions } from './engine/backtester';
 
 const SETTINGS_CACHE_KEY = 'coinbob_user_settings_v1';
@@ -14,6 +14,7 @@ const DEFAULT_SETTINGS: UserSettings = {
         minRsi: 0,
         maxRsi: 100,
         minBobScore: 0,
+        maxBobScore: 100,
         oversold: false,
         goldenCross: false,
         aboveEma20: false,
@@ -25,6 +26,7 @@ const DEFAULT_SETTINGS: UserSettings = {
         ictBearishFVG: false,
     },
     timeframe: '1d',
+    visibleStrategies: ['RSI_MFI', 'BOLLINGER_BOUNCE'],
 };
 
 
@@ -36,6 +38,7 @@ interface UserContextType {
     activeAsset: string | null;
     setActiveAsset: (symbol: string | null) => void;
     setTimeframe: (timeframe: Timeframe) => void;
+    toggleVisibleStrategy: (strategy: StrategyName) => void;
 
     // Futures Logic
     isFuturesMode: boolean;
@@ -96,6 +99,18 @@ export function UserProvider({ children }: { children: ReactNode }) {
         }));
     };
 
+    const toggleVisibleStrategy = (strategy: StrategyName) => {
+        setSettings((prev) => {
+            const isVisible = prev.visibleStrategies?.includes(strategy);
+            return {
+                ...prev,
+                visibleStrategies: isVisible
+                    ? prev.visibleStrategies.filter((s) => s !== strategy)
+                    : [...(prev.visibleStrategies || []), strategy],
+            };
+        });
+    };
+
     const [isFuturesMode, setIsFuturesMode] = useState(true);
 
     const toggleFuturesMode = () => {
@@ -112,7 +127,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
         initialBalance: 10000,
         stopLossPercent: 2.0,
         riskRewardRatio: 2.0,
-        enableSoftExits: true
+
     });
 
     const updateBacktestOptions = (newOptions: Partial<BacktestOptions>) => {
@@ -128,6 +143,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
             activeAsset,
             setActiveAsset,
             setTimeframe,
+            toggleVisibleStrategy,
             isFuturesMode,
             toggleFuturesMode,
             isBacktestMode,

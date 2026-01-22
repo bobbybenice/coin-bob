@@ -228,20 +228,26 @@ export function subscribeToBinanceStream(timeframe: Timeframe, isFuturesMode: bo
                         }
 
                         // Indicators & Strategies via Engine
-                        const analysis = analyzeAsset(history);
+                        const change24h = parseFloat(t.P);
+                        const analysis = analyzeAsset(history, change24h);
+                        // DEBUG: Check breakdown
+                        if (analysis.score > 60 && (!analysis.scoreBreakdown || analysis.scoreBreakdown.length === 0)) {
+                            console.warn(`[Binance] High Score ${analysis.score} but NO Breakdown!`, analysis);
+                        }
+
 
                         // Bob Score Integration
                         let score = analysis.score;
-                        const change24h = parseFloat(t.P);
-                        if (change24h > 5) score += 10;
+                        // Manual boost removed (handled in analyzer)
                         score = Math.min(100, Math.max(0, score));
 
-                        const ictMetadata = analysis.strategies.ict.metadata as {
+                        const ictResult = analysis.strategies['ICT'];
+                        const ictMetadata = ictResult?.metadata as {
                             sweep?: string;
                             fvg?: string;
                             killzone?: 'LONDON' | 'NEW_YORK';
                             isHighProbability?: boolean;
-                        };
+                        } | undefined;
 
                         let oldSignal: 'NONE' | 'BULLISH_SWEEP' | 'BEARISH_SWEEP' | 'BULLISH_FVG' | 'BEARISH_FVG' = 'NONE';
                         if (ictMetadata?.sweep === 'BULLISH') oldSignal = 'BULLISH_SWEEP';
@@ -273,7 +279,9 @@ export function subscribeToBinanceStream(timeframe: Timeframe, isFuturesMode: bo
                             ema200: analysis.indicators.ema200.value,
                             macd: analysis.indicators.macd.value,
                             bb: analysis.indicators.bb.value,
-                            ictAnalysis: ictAnalysis
+                            ictAnalysis: ictAnalysis,
+                            trigger: analysis.trigger,
+                            scoreBreakdown: analysis.scoreBreakdown
                         };
 
                         if (existingIndex >= 0) {
@@ -340,15 +348,15 @@ export function subscribeToBinanceStream(timeframe: Timeframe, isFuturesMode: bo
                     const history = assetHistory[t.symbol] || assetHistory[cleanSymbol] || [];
 
                     // Indicators & Strategies via Engine
-                    const analysis = analyzeAsset(history);
+                    const change24h = parseFloat(t.priceChangePercent);
+                    const analysis = analyzeAsset(history, change24h);
 
                     // Bob Score Integration
                     let score = analysis.score;
-                    const change24h = parseFloat(t.priceChangePercent);
-                    if (change24h > 5) score += 10;
+                    // Manual boost removed (handled in analyzer)
                     score = Math.min(100, Math.max(0, score));
 
-                    const ictMetadata = analysis.strategies.ict.metadata as {
+                    const ictMetadata = analysis.strategies['ICT']?.metadata as {
                         sweep?: string;
                         fvg?: string;
                         killzone?: 'LONDON' | 'NEW_YORK';
@@ -384,6 +392,7 @@ export function subscribeToBinanceStream(timeframe: Timeframe, isFuturesMode: bo
                         macd: analysis.indicators.macd.value,
                         bb: analysis.indicators.bb.value,
                         ictAnalysis: ictAnalysis,
+                        trigger: analysis.trigger,
                         isPerpetual: true,
                         fundingRate: fRate,
                         openInterest: 0,

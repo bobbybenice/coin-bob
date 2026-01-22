@@ -10,13 +10,14 @@ import CommandPalette from './ui/CommandPalette';
 import AssetRow from './ui/AssetRow';
 import { Button } from './ui/Button';
 import { useRouter } from 'next/navigation';
+import { STRATEGIES } from '@/lib/engine/strategies';
 
-type SortField = 'price' | 'change24h' | 'rsi' | 'bobScore' | 'symbol' | 'volume24h';
+type SortField = 'price' | 'bobScore' | 'symbol';
 type SortDirection = 'asc' | 'desc';
 
 export default function AssetScreener() {
   const router = useRouter();
-  const { settings, toggleFavorite, isLoaded, activeAsset, isFuturesMode, toggleFuturesMode } = useUserStore();
+  const { settings, isLoaded, activeAsset, isFuturesMode, toggleFuturesMode, updateFilters } = useUserStore();
   const { trends } = useTrendsStore();
   const { assets, isLoading } = useMarketData();
 
@@ -70,16 +71,16 @@ export default function AssetScreener() {
         }
       }
 
-      // 1. Favorites Only
-      if (settings.filters.favoritesOnly && !settings.favorites.includes(asset.id)) {
-        return false;
-      }
+      // 1. Favorites Only - REMOVED
+
       // 2. RSI Range
       if (settings.filters.minRsi !== undefined && asset.rsi < settings.filters.minRsi) return false;
       if (settings.filters.maxRsi !== undefined && asset.rsi > settings.filters.maxRsi) return false;
 
       // 3. Bob Score
       if (settings.filters.minBobScore !== undefined && asset.bobScore < settings.filters.minBobScore) return false;
+      if (settings.filters.maxBobScore !== undefined && asset.bobScore > settings.filters.maxBobScore) return false;
+
 
       // 4. Advanced Strategies
       if (settings.filters.oversold && asset.rsi >= 30) return false;
@@ -197,6 +198,8 @@ export default function AssetScreener() {
             </div>
           </div>
         </div>
+
+
       </div>
 
       <div className="flex-1 overflow-auto custom-scrollbar w-full">
@@ -224,49 +227,22 @@ export default function AssetScreener() {
                 >
                   Price <SortIcon field="price" />
                 </th>
-                <th
-                  className="py-3 px-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider text-right cursor-pointer hover:text-zinc-300 transition-colors select-none"
-                  onClick={() => handleSort('change24h')}
-                >
-                  24h% <SortIcon field="change24h" />
-                </th>
-                {isFuturesMode ? (
-                  <>
-                    <th className="py-3 px-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider text-right">
-                      Funding Rate
-                    </th>
-                    <th className="py-3 px-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider text-right">
-                      Open Interest
-                    </th>
-                  </>
-                ) : (
-                  <th
-                    className="py-3 px-4 w-[120px] text-xs font-semibold text-zinc-500 uppercase tracking-wider text-right cursor-pointer hover:text-zinc-300 transition-colors select-none"
-                    onClick={() => handleSort('volume24h')}
-                  >
-                    Vol (24h) <SortIcon field="volume24h" />
+
+                {/* REMOVED: 24h% / Vol / Funding / Open Interest */}
+                {/* REMOVED: Trend / RSI / MFI */}
+
+                {/* Dynamic Strategy Columns */}
+                {settings.visibleStrategies?.map((strategy) => (
+                  <th key={strategy} className="py-3 px-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider text-center">
+                    {STRATEGIES[strategy]?.displayName || strategy}
                   </th>
-                )}
+                ))}
+
                 <th className="py-3 px-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider text-center">
-                  Trend (4H/1H/15m)
+                  Signal Probability
                 </th>
                 <th className="py-3 px-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider text-center">
-                  RSI (4H/1H/15m)
-                </th>
-                <th className="py-3 px-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider text-center">
-                  MFI (4H/1H/15m)
-                </th>
-                <th className="py-3 px-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider text-center">
-                  Strategy Matrix
-                </th>
-                <th
-                  className="py-3 px-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider text-right cursor-pointer hover:text-zinc-300 transition-colors select-none"
-                  onClick={() => handleSort('bobScore')}
-                >
-                  Score <SortIcon field="bobScore" />
-                </th>
-                <th className="py-3 px-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider text-center">
-                  Act
+                  Analyze
                 </th>
               </tr>
             </thead>
@@ -279,7 +255,6 @@ export default function AssetScreener() {
                   isActive={activeAsset === asset.symbol}
                   isFuturesMode={isFuturesMode}
                   settings={settings}
-                  onToggleFavorite={toggleFavorite}
                   onAnalyze={(symbol) => router.push(`/analyze/${symbol}`)}
                 />
               ))}

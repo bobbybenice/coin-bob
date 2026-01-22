@@ -1,4 +1,4 @@
-import { Candle, StrategyResponse } from '../types';
+import { Candle, StrategyResponse } from '../../types';
 import { calculateMACD } from '../indicators/macd';
 
 export interface MACDDivergenceOptions {
@@ -168,11 +168,17 @@ export function strategyMACDDivergence(candles: Candle[], options: MACDDivergenc
         }
     }
 
-    // Exit signal: MACD crosses back
-    if (status === 'IDLE' && macd.value.histogram !== undefined && macd.value.histogram !== null) {
-        if (Math.abs(macd.value.histogram) < 0.01) {
+    // Exit signal: MACD approaches zero line (momentum fading)
+    // Only trigger on the crossover to avoid marker spam
+    const currentHist = histogramValues[histogramValues.length - 1];
+    const prevHist = histogramValues[histogramValues.length - 2];
+
+    if (status === 'IDLE' && currentHist !== undefined && prevHist !== undefined) {
+        const threshold = 0.01;
+        // Check if we just entered the low momentum zone
+        if (Math.abs(currentHist) < threshold && Math.abs(prevHist) >= threshold) {
             status = 'EXIT';
-            reason = 'MACD approaching zero line - momentum fading';
+            reason = 'MACD momentum faded (histogram crossed near zero)';
         }
     }
 

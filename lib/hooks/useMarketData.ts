@@ -11,6 +11,7 @@ export function useMarketData() {
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
+        console.log("CoinBob Market Data Hook v2.1 - Loaded");
         setIsLoading(true);
         // Subscribe to the simulation stream
         const unsubscribe = subscribeToBinanceStream(settings.timeframe, isFuturesMode, (data) => {

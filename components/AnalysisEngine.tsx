@@ -3,7 +3,8 @@
 import { useState } from 'react';
 import { useUserStore } from '@/lib/store';
 import { useFearAndGreed } from '@/lib/hooks/useFearAndGreed';
-import { PanelRightClose, PanelRightOpen, Target, Zap, TrendingUp, Landmark, SlidersHorizontal, Brain } from 'lucide-react';
+import { PanelRightClose, PanelRightOpen, Target, Zap, TrendingUp, Landmark, SlidersHorizontal, Brain, Layers } from 'lucide-react';
+import { STRATEGIES, getAllStrategyNames } from '@/lib/engine/strategies';
 import { ThemeToggle } from '@/components/theme-toggle';
 import SignalMonitor from './SignalMonitor';
 import SentimentWidget from './ui/SentimentWidget';
@@ -17,7 +18,7 @@ interface AnalysisEngineProps {
 }
 
 export default function AnalysisEngine({ isOpen = true, onToggle }: AnalysisEngineProps) {
-    const { settings, updateFilters, isLoaded } = useUserStore();
+    const { settings, updateFilters, isLoaded, toggleVisibleStrategy } = useUserStore();
     const { data: fngData } = useFearAndGreed();
 
     // Accordion State
@@ -27,7 +28,8 @@ export default function AnalysisEngine({ isOpen = true, onToggle }: AnalysisEngi
         ict: false,
         trend: false,
         manual: false,
-        ai: false
+        ai: false,
+        strategies: true // Default open to show new feature
     });
 
     const toggleSection = (key: string) => {
@@ -98,6 +100,26 @@ export default function AnalysisEngine({ isOpen = true, onToggle }: AnalysisEngi
                                 </svg>
                             </div>
                         </label>
+                    </FilterSection>
+
+                    {/* Strategies (Screener Columns) */}
+                    <FilterSection id="strategies" title="Strategies" icon={Layers} colorClass="text-zinc-400" isOpen={openSections.strategies} onToggle={toggleSection}>
+                        {getAllStrategyNames().map((name) => (
+                            <div key={name} className="flex items-center justify-between py-1 px-2 rounded hover:bg-muted/50 transition-all cursor-pointer group" onClick={() => toggleVisibleStrategy(name)}>
+                                <span className="text-foreground font-medium text-xs">{STRATEGIES[name].displayName}</span>
+                                <div className="relative flex items-center">
+                                    <input
+                                        type="checkbox"
+                                        checked={settings.visibleStrategies?.includes(name)}
+                                        onChange={() => { }} // Handled by div click
+                                        className="peer appearance-none w-3.5 h-3.5 rounded border border-input bg-background checked:bg-zinc-500 checked:border-zinc-500 transition-colors pointer-events-none"
+                                    />
+                                    <svg className="absolute w-3 h-3 text-white pointer-events-none opacity-0 peer-checked:opacity-100 left-0 top-0.5" viewBox="0 0 14 14" fill="none">
+                                        <path d="M3 7L6 10L11 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                    </svg>
+                                </div>
+                            </div>
+                        ))}
                     </FilterSection>
 
                     {/* Entry Signals */}

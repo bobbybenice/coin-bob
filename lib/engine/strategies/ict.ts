@@ -1,4 +1,4 @@
-import { Candle, StrategyResponse } from '../types';
+import { Candle, StrategyResponse } from '../../types';
 import { ActiveZone } from '@/lib/types';
 import { DateTime } from 'luxon';
 

@@ -30,6 +30,13 @@ export interface ICTAnalysis {
     isHighProbability: boolean;
 }
 
+export interface ScoreComponent {
+    label: string;
+    value: number;
+    category: 'TREND' | 'STRATEGY' | 'INDICATOR';
+    description: string;
+}
+
 export interface Asset {
     id: string;
     symbol: string;
@@ -40,6 +47,7 @@ export interface Asset {
     marketCap: number;
     rsi: number;
     bobScore: number;
+    scoreBreakdown?: ScoreComponent[];
     // Futures Data
     isPerpetual?: boolean;
     fundingRate?: number; // In percentage (e.g. 0.01)
@@ -61,6 +69,7 @@ export interface Asset {
         lower: number;
     };
     ictAnalysis?: ICTAnalysis;
+    trigger?: boolean; // True if an active entry trigger exists
 }
 
 export interface FilterCriteria {
@@ -68,6 +77,7 @@ export interface FilterCriteria {
     minRsi: number;
     maxRsi: number;
     minBobScore: number;
+    maxBobScore?: number;
     // New Strategy Filters
     oversold: boolean;     // RSI < 30
     goldenCross: boolean;  // EMA 50 > EMA 200
@@ -82,10 +92,21 @@ export interface FilterCriteria {
 }
 
 
+export type StrategyName =
+    | 'RSI_MFI'
+    | 'BOLLINGER_BOUNCE'
+    | 'MACD_DIVERGENCE'
+    | 'EMA_CROSSOVER'
+    | 'VOLUME_BREAKOUT'
+    | 'SUPPORT_RESISTANCE'
+    | 'GOLDEN_STRATEGY'
+    | 'ICT';
+
 export interface UserSettings {
     favorites: string[];
     filters: FilterCriteria;
     timeframe: Timeframe;
+    visibleStrategies: StrategyName[];
 }
 
 export interface NewsItem {
@@ -128,6 +149,7 @@ export interface StrategyResponse {
         sweep?: 'BULLISH' | 'BEARISH' | null;
         fvg?: 'BULLISH' | 'BEARISH' | null;
         activeZones?: ActiveZone[];
+        [key: string]: unknown;
     };
 }
 
@@ -167,18 +189,11 @@ export interface AssetTrends {
     mfi15m?: number;
     mfi1h?: number;
     mfi4h?: number;
+    strategies?: Record<StrategyName, Record<string, 'LONG' | 'SHORT' | null>>;
     lastUpdated?: number;
 }
 
-export type StrategyName =
-    | 'RSI_MFI'
-    | 'BOLLINGER_BOUNCE'
-    | 'MACD_DIVERGENCE'
-    | 'EMA_CROSSOVER'
-    | 'VOLUME_BREAKOUT'
-    | 'SUPPORT_RESISTANCE'
-    | 'GOLDEN_STRATEGY'
-    | 'ICT';
+
 
 export interface ChartMarker {
     time: number;
@@ -188,3 +203,30 @@ export interface ChartMarker {
     text?: string;
     size?: number;
 }
+
+export interface IndicatorResult<T = number> {
+    value: T;
+    signal?: 'buy' | 'sell' | 'neutral';
+    metadata?: Record<string, unknown>;
+}
+
+export type IndicatorFunction<T = number> = (candles: Candle[]) => IndicatorResult<T>;
+
+export interface TradeRecord {
+    entryTime: number;
+    exitTime: number;
+    entryPrice: number;
+    exitPrice: number;
+    pnl: number;
+    pnlPercent: number;
+    side: 'LONG' | 'SHORT';
+}
+
+export interface BacktestResult {
+    totalTrades: number;
+    winRate: number;
+    pnl: number;
+    trades: TradeRecord[];
+}
+
+export type StrategyFunction = (candles: Candle[], options?: Record<string, unknown>) => StrategyResponse;

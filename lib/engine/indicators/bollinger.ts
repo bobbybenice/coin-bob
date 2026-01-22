@@ -1,5 +1,5 @@
 import { BollingerBands } from 'technicalindicators';
-import { Candle, IndicatorResult } from '../types';
+import { Candle, IndicatorResult } from '../../types';
 
 interface BBResult {
     middle: number;

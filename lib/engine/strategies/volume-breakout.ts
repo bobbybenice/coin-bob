@@ -1,4 +1,4 @@
-import { Candle, StrategyResponse } from '../types';
+import { Candle, StrategyResponse } from '../../types';
 
 export interface VolumeBreakoutOptions {
     volumeMultiplier?: number;

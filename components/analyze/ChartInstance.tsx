@@ -7,9 +7,9 @@ import { useChartData } from '@/lib/hooks/useChartData';
 import { useStrategyMarkers } from '@/lib/hooks/useStrategyMarkers';
 import { getAllStrategyNames, getStrategy } from '@/lib/engine/strategies';
 import { runBacktest } from '@/lib/engine/backtester';
-import { BacktestResult } from '@/lib/engine/types'; // Import BacktestResult type
+import { BacktestResult } from '@/lib/types'; // Import BacktestResult type
 import { useUserStore } from '@/lib/store';
-import { Trophy } from 'lucide-react';
+import { Trophy, ChevronDown } from 'lucide-react';
 
 interface ChartInstanceProps {
     symbol: string;
@@ -41,7 +41,7 @@ export function ChartInstance({
     const [backtestMarkers, setBacktestMarkers] = useState<any[]>([]);
 
     const { candles, isLoading, error } = useChartData(symbol, timeframe, isFuturesMode);
-    const { markers: liveMarkers, strategyStatus } = useStrategyMarkers(candles, selectedStrategy);
+    const { markers: liveMarkers, strategyStatus, sentiment } = useStrategyMarkers(candles, selectedStrategy);
 
     // Calculate Backtest Results when in mode
     useEffect(() => {
@@ -244,37 +244,43 @@ export function ChartInstance({
             <div className="flex items-center justify-between p-3 border-b border-border bg-muted/30">
                 <div className="flex items-center gap-3">
                     {/* Timeframe Selector */}
-                    <select
-                        value={timeframe}
-                        onChange={(e) => setTimeframe(e.target.value as Timeframe)}
-                        className="px-3 py-1.5 text-xs font-medium bg-background border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
-                    >
-                        <option value="1m">1m</option>
-                        <option value="5m">5m</option>
-                        <option value="15m">15m</option>
-                        <option value="30m">30m</option>
-                        <option value="1h">1h</option>
-                        <option value="2h">2h</option>
-                        <option value="4h">4h</option>
-                        <option value="1d">1d</option>
-                    </select>
+                    <div className="relative group">
+                        <select
+                            value={timeframe}
+                            onChange={(e) => setTimeframe(e.target.value as Timeframe)}
+                            className="appearance-none pl-3 pr-9 py-1.5 text-xs font-medium bg-background border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500/50 hover:border-emerald-500/50 transition-colors cursor-pointer"
+                        >
+                            <option value="1m">1m</option>
+                            <option value="5m">5m</option>
+                            <option value="15m">15m</option>
+                            <option value="30m">30m</option>
+                            <option value="1h">1h</option>
+                            <option value="2h">2h</option>
+                            <option value="4h">4h</option>
+                            <option value="1d">1d</option>
+                        </select>
+                        <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none group-hover:text-emerald-500 transition-colors" />
+                    </div>
 
                     {/* Strategy Selector */}
-                    <select
-                        value={selectedStrategy || ''}
-                        onChange={(e) => setSelectedStrategy(e.target.value as StrategyName || null)}
-                        className="px-3 py-1.5 text-xs font-medium bg-background border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
-                    >
-                        <option value="">No Strategy</option>
-                        {strategyNames.map((name) => {
-                            const config = getStrategy(name);
-                            return (
-                                <option key={name} value={name}>
-                                    {config?.displayName || name}
-                                </option>
-                            );
-                        })}
-                    </select>
+                    <div className="relative group">
+                        <select
+                            value={selectedStrategy || ''}
+                            onChange={(e) => setSelectedStrategy(e.target.value as StrategyName || null)}
+                            className="appearance-none pl-3 pr-9 py-1.5 text-xs font-medium bg-background border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500/50 hover:border-emerald-500/50 transition-colors cursor-pointer min-w-[140px]"
+                        >
+                            <option value="">No Strategy</option>
+                            {strategyNames.map((name) => {
+                                const config = getStrategy(name);
+                                return (
+                                    <option key={name} value={name}>
+                                        {config?.displayName || name}
+                                    </option>
+                                );
+                            })}
+                        </select>
+                        <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none group-hover:text-emerald-500 transition-colors" />
+                    </div>
                 </div>
 
                 <div className="text-xs text-muted-foreground">
@@ -284,10 +290,15 @@ export function ChartInstance({
 
             {/* Strategy Status */}
             {selectedStrategy && (
-                <div className="px-3 py-2 bg-muted/20 border-b border-border">
+                <div className="px-3 py-2 bg-muted/20 border-b border-border flex justify-between items-center">
                     <div className="text-xs text-muted-foreground">
                         <span className="font-semibold">Status:</span> {strategyStatus}
                     </div>
+                    {/* Status Indicator Dot */}
+                    <div className={`w-2 h-2 rounded-full ${sentiment === 'BULLISH' ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' :
+                        sentiment === 'BEARISH' ? 'bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.5)]' :
+                            'bg-zinc-500'
+                        }`} />
                 </div>
             )}
 
