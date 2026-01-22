@@ -17,15 +17,15 @@ type SortDirection = 'asc' | 'desc';
 
 export default function AssetScreener() {
   const router = useRouter();
-  const { settings, isLoaded, activeAsset, isFuturesMode, toggleFuturesMode, updateFilters } = useUserStore();
+  const { settings, isLoaded, activeAsset, isFuturesMode, toggleFuturesMode } = useUserStore();
   const { trends } = useTrendsStore();
   const { assets, isLoading } = useMarketData();
 
   // Background Scanner only - Alerts UI moved to Analysis Engine
   useTrendScanner(assets);
 
-  const [sortField, setSortField] = useState<SortField>('bobScore');
-  const [sortDir, setSortDir] = useState<SortDirection>('desc');
+  const [sortField, setSortField] = useState<SortField>('symbol');
+  const [sortDir, setSortDir] = useState<SortDirection>('asc');
 
   // Command Palette State
   const [isSearchOpen, setIsSearchOpen] = useState(false);

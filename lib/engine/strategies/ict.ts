@@ -147,11 +147,11 @@ export function strategyICT(candles: Candle[]): StrategyResponse {
     if (c1_curr && c3_curr) {
         if (c1_curr.high < c3_curr.low) {
             fvgSignal = 'BULLISH';
-            if (!sweepSignal) reasonParts.push('Fair Value Gap (Bullish)');
+            reasonParts.push('Fair Value Gap (Bullish)');
             entryPrice = c3_curr.low;
         } else if (c1_curr.low > c3_curr.high) {
             fvgSignal = 'BEARISH';
-            if (!sweepSignal) reasonParts.push('Fair Value Gap (Bearish)');
+            reasonParts.push('Fair Value Gap (Bearish)');
             entryPrice = c3_curr.high;
         }
     }

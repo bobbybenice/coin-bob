@@ -19,16 +19,10 @@ export default function AssetRow({
     asset,
     trend,
     isActive,
-    isFuturesMode,
+    // isFuturesMode, // Unused
     settings,
     onAnalyze,
 }: AssetRowProps) {
-    const isGolden = asset.ema50 && asset.ema200 && asset.ema50 > asset.ema200;
-    const isUptrend = asset.ema20 && asset.price > asset.ema20;
-    const macdVal = asset.macd?.histogram;
-    const isMacd = macdVal && macdVal > 0;
-    const signal = asset.ictAnalysis?.signal;
-
     const [overlay, setOverlay] = useState<{ show: boolean, x: number, y: number } | null>(null);
 
     const handleScoreClick = (e: React.MouseEvent) => {

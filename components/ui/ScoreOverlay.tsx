@@ -1,6 +1,6 @@
 import React from 'react';
 import { ScoreComponent } from '@/lib/types';
-import { X, TrendingUp, TrendingDown, Activity, Layers } from 'lucide-react';
+import { X, TrendingUp, Activity, Layers } from 'lucide-react';
 
 interface ScoreOverlayProps {
     score: number;

@@ -14,8 +14,10 @@ import { Trophy, ChevronDown } from 'lucide-react';
 interface ChartInstanceProps {
     symbol: string;
     initialTimeframe?: Timeframe;
-    initialStrategy?: StrategyName | null;
-    onZoomReset?: number; // Counter to trigger zoom reset
+    initialStrategy?: StrategyName | null; // For uncontrolled mode
+    strategy?: StrategyName | null;        // For controlled mode
+    onZoomReset?: number;
+    onStrategyChange?: (strategy: StrategyName | null) => void;
 }
 
 /**
@@ -25,7 +27,9 @@ export function ChartInstance({
     symbol,
     initialTimeframe = '1h',
     initialStrategy = null,
-    onZoomReset = 0
+    strategy, // controlled prop
+    onZoomReset = 0,
+    onStrategyChange
 }: ChartInstanceProps) {
     const chartContainerRef = useRef<HTMLDivElement>(null);
     const chartRef = useRef<ReturnType<typeof createChart> | null>(null);
@@ -33,7 +37,11 @@ export function ChartInstance({
     const markerPluginRef = useRef<ReturnType<typeof createSeriesMarkers<Time>> | null>(null);
 
     const [timeframe, setTimeframe] = useState<Timeframe>(initialTimeframe);
-    const [selectedStrategy, setSelectedStrategy] = useState<StrategyName | null>(initialStrategy);
+    // Internal state mainly for uncontrolled usage
+    const [internalStrategy, setInternalStrategy] = useState<StrategyName | null>(initialStrategy);
+
+    // Determine effective strategy: Controlled Prop > Internal State
+    const selectedStrategy = strategy !== undefined ? strategy : internalStrategy;
 
     const { isBacktestMode, backtestOptions, isFuturesMode } = useUserStore();
     const [backtestResult, setBacktestResult] = useState<BacktestResult | null>(null);
@@ -122,20 +130,26 @@ export function ChartInstance({
         chartRef.current = chart;
         candleSeriesRef.current = candleSeries;
 
-        // Handle resize
-        const handleResize = () => {
-            if (chartContainerRef.current && chart) {
-                chart.applyOptions({
-                    width: chartContainerRef.current.clientWidth,
-                    height: chartContainerRef.current.clientHeight,
-                });
-            }
-        };
+        // Handle resize with ResizeObserver
+        const resizeObserver = new ResizeObserver((entries) => {
+            if (entries.length === 0 || !entries[0].target) return;
 
-        window.addEventListener('resize', handleResize);
+            const newRect = entries[0].contentRect;
+            chart.applyOptions({
+                width: newRect.width,
+                height: newRect.height,
+            });
+
+            // Optional: Request animation frame to ensure fitContent happens after layout update
+            requestAnimationFrame(() => {
+                chart.timeScale().fitContent();
+            });
+        });
+
+        resizeObserver.observe(chartContainerRef.current);
 
         return () => {
-            window.removeEventListener('resize', handleResize);
+            resizeObserver.disconnect();
             chart.remove();
         };
     }, []);
@@ -266,7 +280,14 @@ export function ChartInstance({
                     <div className="relative group">
                         <select
                             value={selectedStrategy || ''}
-                            onChange={(e) => setSelectedStrategy(e.target.value as StrategyName || null)}
+                            onChange={(e) => {
+                                const newStrategy = e.target.value as StrategyName || null;
+                                // Only update internal state if NOT controlled (or update it anyway to keep in sync, but rely on prop)
+                                if (strategy === undefined) {
+                                    setInternalStrategy(newStrategy);
+                                }
+                                onStrategyChange?.(newStrategy);
+                            }}
                             className="appearance-none pl-3 pr-9 py-1.5 text-xs font-medium bg-background border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500/50 hover:border-emerald-500/50 transition-colors cursor-pointer min-w-[140px]"
                         >
                             <option value="">No Strategy</option>
