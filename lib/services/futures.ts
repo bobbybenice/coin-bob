@@ -122,7 +122,7 @@ export async function fetchOpenInterest(symbol: string): Promise<number> {
 }
 
 // Map for Spot symbols -> Futures symbols (Binance uses 1000 prefix for meme coins)
-const FUTURES_SYMBOL_MAP: Record<string, string> = {
+export const FUTURES_SYMBOL_MAP: Record<string, string> = {
     'BONKUSDT': '1000BONKUSDT',
     'PEPEUSDT': '1000PEPEUSDT',
     'SHIBUSDT': '1000SHIBUSDT',

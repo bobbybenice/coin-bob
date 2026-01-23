@@ -1,11 +1,13 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 'use server';
 import { Candle } from '@/lib/types';
+import { FUTURES_SYMBOL_MAP } from './futures';
 
 export async function fetchHistoricalData(symbol: string, interval: string = '1d', isFutures: boolean = false): Promise<Candle[]> {
     if (isFutures) {
         // Direct Futures Fetch (Single Source for now)
-        const url = `https://fapi.binance.com/fapi/v1/klines?symbol=${symbol}&interval=${interval}&limit=500`;
+        const querySymbol = FUTURES_SYMBOL_MAP[symbol] || symbol;
+        const url = `https://fapi.binance.com/fapi/v1/klines?symbol=${querySymbol}&interval=${interval}&limit=500`;
         try {
             const res = await fetch(url, { headers: { 'User-Agent': 'CoinBob/1.0' }, cache: 'no-store' });
             if (res.ok) {
@@ -94,11 +96,20 @@ export async function fetchHistoricalData(symbol: string, interval: string = '1d
     ];
 
     for (const source of sources) {
+        if (!source.url) continue; // Skip invalid sources (e.g. Coinbase for 30m)
+
         try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 5000); // 5s Timeout
+
             const res = await fetch(source.url, {
                 // headers: { 'User-Agent': 'CoinBob/1.0' }, // Removed to bypass WAF
-                cache: 'no-store' // Critical: We use LocalStorage for caching now
+                cache: 'no-store',
+                signal: controller.signal
             });
+
+            clearTimeout(timeoutId);
+
             if (!res.ok) continue;
 
             const json = await res.json();
@@ -109,6 +120,7 @@ export async function fetchHistoricalData(symbol: string, interval: string = '1d
             }
         } catch (e) {
             console.warn(`Failed to fetch history from ${source.name} for ${symbol}:`, e);
+            // Continue to next source
         }
     }
 

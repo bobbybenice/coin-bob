@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Candle, Timeframe } from '@/lib/types';
 import { fetchHistoricalData } from '@/lib/services/market';
+import { FUTURES_SYMBOL_MAP } from '@/lib/services/futures';
 
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
-const SPOT_API = 'https://api.binance.com/api/v3';
-const FUTURES_API = 'https://fapi.binance.com/fapi/v1';
 const SPOT_WS = 'wss://stream.binance.com:9443/ws';
 const FUTURES_WS = 'wss://fstream.binance.com/ws';
 
@@ -46,7 +45,12 @@ export function useChartData(symbol: string, timeframe: Timeframe, isFutures: bo
 
         // Symbol formatting
         const baseSymbol = symbol.toUpperCase().replace('USDT', '') + 'USDT';
-        const wsSymbol = baseSymbol.toLowerCase();
+
+        let wsSymbol = baseSymbol.toLowerCase();
+        if (isFutures) {
+            const mapped = FUTURES_SYMBOL_MAP[baseSymbol];
+            if (mapped) wsSymbol = mapped.toLowerCase();
+        }
 
         // Select API
         const WS_BASE = isFutures ? FUTURES_WS : SPOT_WS;
