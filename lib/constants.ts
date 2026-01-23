@@ -8,7 +8,7 @@ export const WATCHLIST = [
     'BONKUSDT', 'SUIUSDT', 'VETUSDT', 'OPUSDT', 'TAOUSDT',
     'GRTUSDT', 'AAVEUSDT', 'ALGOUSDT', 'THETAUSDT', 'OMUSDT',
     'RUNEUSDT', 'EGLDUSDT', 'FETUSDT', 'SANDUSDT', 'MKRUSDT',
-    'FANTOMUSDT', 'SEIUSDT', 'TIAUSDT', 'JUPUSDT', 'LDOUSDT'
+    'FTMUSDT', 'SEIUSDT', 'TIAUSDT', 'JUPUSDT', 'LDOUSDT'
 ];
 
 // Helper to format names nicely
@@ -28,5 +28,10 @@ Object.assign(SYMBOL_MAP, {
     'BTCUSDT': { id: 'bitcoin', name: 'Bitcoin' },
     'ETHUSDT': { id: 'ethereum', name: 'Ethereum' },
     'SOLUSDT': { id: 'solana', name: 'Solana' },
-    'DOGEUSDT': { id: 'dogecoin', name: 'Dogecoin' }
+    'DOGEUSDT': { id: 'dogecoin', name: 'Dogecoin' },
+    'FTMUSDT': { id: 'fantom', name: 'Fantom' },
+    'MATICUSDT': { id: 'matic-network', name: 'Polygon' },
+    'RNDRUSDT': { id: 'render-token', name: 'Render' },
+    'PEPEUSDT': { id: 'pepe', name: 'Pepe' },
+    'SHIBUSDT': { id: 'shiba-inu', name: 'Shiba Inu' }
 });

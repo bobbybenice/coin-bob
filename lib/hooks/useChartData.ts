@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Candle, Timeframe } from '@/lib/types';
+import { fetchHistoricalData } from '@/lib/services/market';
 
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 const SPOT_API = 'https://api.binance.com/api/v3';
@@ -44,14 +45,10 @@ export function useChartData(symbol: string, timeframe: Timeframe, isFutures: bo
         const cacheKey = `${isFutures ? 'F_' : 'S_'}${symbol}_${timeframe}_${limit}`;
 
         // Symbol formatting
-        // Spot: ETHUSDT. Futures: ETHUSDT (mostly same, but let's be safe). 
-        // If coming from symbol like 'ETH', we append USDT. 
-        // If symbol already has USDT, leave it.
         const baseSymbol = symbol.toUpperCase().replace('USDT', '') + 'USDT';
         const wsSymbol = baseSymbol.toLowerCase();
 
         // Select API
-        const API_BASE = isFutures ? FUTURES_API : SPOT_API;
         const WS_BASE = isFutures ? FUTURES_WS : SPOT_WS;
 
         let ws: WebSocket | null = null;
@@ -76,40 +73,28 @@ export function useChartData(symbol: string, timeframe: Timeframe, isFutures: bo
 
             try {
                 const interval = convertTimeframe(timeframe);
-                // Spot uses /klines, Futures uses /klines so path is same, just base differs
-                const response = await fetch(
-                    `${API_BASE}/klines?symbol=${baseSymbol}&interval=${interval}&limit=${limit}`
-                );
 
-                if (!response.ok) {
-                    throw new Error(`Failed to fetch klines: ${response.statusText}`);
-                }
-
-                const data = await response.json();
+                // Use Server Action with multiple fallbacks (Binance Global -> Coinbase -> Binance US)
+                // This replaces the direct client-side fetch which was brittle
+                const fetchedCandles = await fetchHistoricalData(baseSymbol, interval, isFutures);
 
                 if (!isMounted) return;
 
-                const parsedCandles: Candle[] = data.map((k: unknown[]) => ({
-                    time: k[0] as number,
-                    open: parseFloat(k[1] as string),
-                    high: parseFloat(k[2] as string),
-                    low: parseFloat(k[3] as string),
-                    close: parseFloat(k[4] as string),
-                    volume: parseFloat(k[5] as string)
-                }));
+                if (!fetchedCandles || fetchedCandles.length === 0) {
+                    throw new Error('No Data Found (Check Network/Symbol)');
+                }
 
                 // Update cache
                 cache.set(cacheKey, {
-                    data: parsedCandles,
+                    data: fetchedCandles,
                     timestamp: Date.now()
                 });
 
-                setCandles(parsedCandles);
+                setCandles(fetchedCandles);
             } catch (err) {
                 if (isMounted) {
-                    // Futures might return 400 for invalid symbol if not available on futures
-                    setError(err instanceof Error ? err.message : 'Unknown error');
-                    console.error('Error fetching chart data:', err);
+                    setError(err instanceof Error ? err.message : 'Failed to load chart data');
+                    console.error('Data Load Error:', err);
                 }
             } finally {
                 if (isMounted) setIsLoading(false);

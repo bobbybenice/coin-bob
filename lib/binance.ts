@@ -334,18 +334,24 @@ export function subscribeToBinanceStream(timeframe: Timeframe, isFuturesMode: bo
             const newAssets: Asset[] = [];
 
             for (const t of tickers) {
-                if (WATCHLIST.includes(t.symbol) || WATCHLIST.includes(t.symbol.replace('USDT', '') + 'USDT')) { // Match our watchlist
-                    const cleanSymbol = t.symbol.replace('USDT', '');
-                    const info = SYMBOL_MAP[t.symbol] || { id: cleanSymbol.toLowerCase(), name: cleanSymbol };
+                // Normalize symbol: Remove '1000' prefix for meme coins to match Watchlist
+                // e.g. '1000BONKUSDT' -> 'BONKUSDT'
+                const normalizedSymbol = t.symbol.replace(/^1000/, '');
+
+                if (WATCHLIST.includes(normalizedSymbol)) {
+                    const cleanSymbol = normalizedSymbol.replace('USDT', '');
+                    const info = SYMBOL_MAP[normalizedSymbol] || { id: cleanSymbol.toLowerCase(), name: cleanSymbol };
 
                     const price = parseFloat(t.lastPrice);
-                    const funding = fundingMap.get(t.symbol);
+                    const funding = fundingMap.get(t.symbol); // Use original t.symbol for map lookup
                     const fRate = funding ? parseFloat(funding.rate) * 100 : 0; // Convert to %
 
                     // Get History for Indicators (Futures History)
-                    // Note: symbol might need to be adjusted if assetHistory keys differ
-                    if (!assetHistory[cleanSymbol] && !assetHistory[t.symbol]) assetHistory[cleanSymbol] = [];
-                    const history = assetHistory[t.symbol] || assetHistory[cleanSymbol] || [];
+                    // We store history key as the NORMALIZED symbol (e.g. BONKUSDT) or clean (BONK)
+                    // fetchFuturesKlines handles the mapping internally now.
+                    // Check cleanSymbol first
+                    if (!assetHistory[normalizedSymbol]) assetHistory[normalizedSymbol] = [];
+                    const history = assetHistory[normalizedSymbol];
 
                     // Indicators & Strategies via Engine
                     const change24h = parseFloat(t.priceChangePercent);
@@ -396,7 +402,8 @@ export function subscribeToBinanceStream(timeframe: Timeframe, isFuturesMode: bo
                         isPerpetual: true,
                         fundingRate: fRate,
                         openInterest: 0,
-                        nextFundingTime: funding?.nextTime
+                        nextFundingTime: funding?.nextTime,
+                        scoreBreakdown: analysis.scoreBreakdown
                     });
                 }
             }

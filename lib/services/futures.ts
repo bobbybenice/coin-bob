@@ -121,9 +121,22 @@ export async function fetchOpenInterest(symbol: string): Promise<number> {
     }
 }
 
+// Map for Spot symbols -> Futures symbols (Binance uses 1000 prefix for meme coins)
+const FUTURES_SYMBOL_MAP: Record<string, string> = {
+    'BONKUSDT': '1000BONKUSDT',
+    'PEPEUSDT': '1000PEPEUSDT',
+    'SHIBUSDT': '1000SHIBUSDT',
+    'FLOKIUSDT': '1000FLOKIUSDT',
+    'LUNCUSDT': '1000LUNCUSDT',
+    'XECUSDT': '1000XECUSDT',
+    'SATSUSDT': '1000SATSUSDT',
+    'RATSUSDT': '1000RATSUSDT'
+};
+
 export async function fetchFuturesKlines(symbol: string, interval: string = '1h', limit: number = 100) {
     try {
-        const res = await fetch(`${FAPI_BASE}/fapi/v1/klines?symbol=${symbol}&interval=${interval}&limit=${limit}`, {
+        const querySymbol = FUTURES_SYMBOL_MAP[symbol] || symbol;
+        const res = await fetch(`${FAPI_BASE}/fapi/v1/klines?symbol=${querySymbol}&interval=${interval}&limit=${limit}`, {
             cache: 'no-store'
         });
         if (!res.ok) return [];

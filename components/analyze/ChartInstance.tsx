@@ -313,13 +313,22 @@ export function ChartInstance({
             {selectedStrategy && (
                 <div className="px-3 py-2 bg-muted/20 border-b border-border flex justify-between items-center">
                     <div className="text-xs text-muted-foreground">
-                        <span className="font-semibold">Status:</span> {strategyStatus}
+                        <span className="font-semibold">Status:</span>{' '}
+                        {isLoading ? (
+                            <span className="text-emerald-500 animate-pulse">Analyzing...</span>
+                        ) : error ? (
+                            <span className="text-rose-500">Data Error</span>
+                        ) : (
+                            strategyStatus
+                        )}
                     </div>
                     {/* Status Indicator Dot */}
-                    <div className={`w-2 h-2 rounded-full ${sentiment === 'BULLISH' ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' :
-                        sentiment === 'BEARISH' ? 'bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.5)]' :
-                            'bg-zinc-500'
-                        }`} />
+                    {!isLoading && !error && (
+                        <div className={`w-2 h-2 rounded-full ${sentiment === 'BULLISH' ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' :
+                            sentiment === 'BEARISH' ? 'bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.5)]' :
+                                'bg-zinc-500'
+                            }`} />
+                    )}
                 </div>
             )}
 

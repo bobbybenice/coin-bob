@@ -101,10 +101,10 @@ export function useTrendScanner(assets: Asset[]) {
             indexRef.current = (indexRef.current + 1) % assets.length;
 
             try {
-                // Check cache validity (5 mins for deep scan)
+                // Check cache validity (1 min for deep scan, was 5 min)
                 const cached = trends[asset.symbol];
                 const now = Date.now();
-                if (cached && cached.lastUpdated && (now - cached.lastUpdated < 300000)) {
+                if (cached && cached.lastUpdated && (now - cached.lastUpdated < 60000)) {
                     processingRef.current = false;
                     return;
                 }
@@ -200,7 +200,7 @@ export function useTrendScanner(assets: Asset[]) {
             }
         };
 
-        const interval = setInterval(processNextAsset, 1000); // Slower interval due to heavy fetching (1 asset / sec)
+        const interval = setInterval(processNextAsset, 250); // Speed up interval (4 assets/sec) -> ~15s for 60 assets
         return () => clearInterval(interval);
     }, [assets, trends, updateAssetTrend]);
 }
