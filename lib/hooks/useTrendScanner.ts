@@ -113,13 +113,14 @@ export function useTrendScanner(assets: Asset[]) {
                 const symbol = asset.symbol.toUpperCase().endsWith('USDT') ? asset.symbol : `${asset.symbol}USDT`;
 
                 // Fetch 6 timeframes
+                const isFutures = asset.isPerpetual ?? false;
                 const [d1, h4, h1, m30, m15, m5] = await Promise.all([
-                    fetchHistoricalData(symbol, '1d'),
-                    fetchHistoricalData(symbol, '4h'),
-                    fetchHistoricalData(symbol, '1h'),
-                    fetchHistoricalData(symbol, '30m'),
-                    fetchHistoricalData(symbol, '15m'),
-                    fetchHistoricalData(symbol, '5m')
+                    fetchHistoricalData(symbol, '1d', isFutures),
+                    fetchHistoricalData(symbol, '4h', isFutures),
+                    fetchHistoricalData(symbol, '1h', isFutures),
+                    fetchHistoricalData(symbol, '30m', isFutures),
+                    fetchHistoricalData(symbol, '15m', isFutures),
+                    fetchHistoricalData(symbol, '5m', isFutures)
                 ]);
 
                 // Map results for easy access

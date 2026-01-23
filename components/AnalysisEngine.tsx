@@ -29,6 +29,13 @@ export default function AnalysisEngine({ isOpen = true, onToggle }: AnalysisEngi
         setOpenSections(prev => ({ ...prev, [key]: !prev[key] }));
     };
 
+    const handleClearCache = () => {
+        if (confirm('Are you sure? This will reset all settings and cache.')) {
+            localStorage.clear();
+            window.location.reload();
+        }
+    };
+
     if (!isLoaded) return <div className="p-4 text-muted-foreground animate-pulse">Loading...</div>;
 
     return (
@@ -96,6 +103,17 @@ export default function AnalysisEngine({ isOpen = true, onToggle }: AnalysisEngi
                     </FilterSection>
 
                 </div>
+            </div>
+
+            {/* Footer Actions */}
+            <div className={`p-4 border-t border-border bg-card backdrop-blur-sm shrink-0 transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+                <Button
+                    variant="secondary"
+                    onClick={handleClearCache}
+                    className="w-full text-xs font-bold uppercase tracking-wider text-rose-500 hover:text-rose-600 hover:bg-rose-500/10 border border-rose-500/20 hover:border-rose-500/50"
+                >
+                    Clear Cache & Reload
+                </Button>
             </div>
 
             {/* Logic Components */}
