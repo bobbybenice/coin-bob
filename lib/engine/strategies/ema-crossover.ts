@@ -52,14 +52,18 @@ export function strategyEMACrossover(candles: Candle[], options: EMACrossoverOpt
         prevSlowEMA = prevSlow.value || NaN;
     }
 
-    let status: StrategyResponse['status'] = 'IDLE';
-    let reason = '';
-    let side: 'LONG' | 'SHORT' = 'LONG';
-    let stopLoss = 0;
-    let takeProfit = 0;
-
     const currentFast = fastEMA.value;
     const currentSlow = slowEMA.value;
+
+    let status: StrategyResponse['status'] = 'IDLE';
+    let reason = '';
+
+    // Initialize side based on current Chart State (Fast > Slow = Bull/Long)
+    // This fixes the bug where it defaulted to 'LONG' even in a downtrend.
+    let side: 'LONG' | 'SHORT' | undefined = currentFast > currentSlow ? 'LONG' : 'SHORT';
+
+    let stopLoss = 0;
+    let takeProfit = 0;
 
     // Calculate EMA separation as percentage
     const separation = ((currentFast - currentSlow) / currentSlow) * 100;
@@ -88,11 +92,13 @@ export function strategyEMACrossover(candles: Candle[], options: EMACrossoverOpt
     // Approaching Golden Cross
     else if (currentFast < currentSlow && Math.abs(separation) < 1 && separation > prevSeparation) {
         status = 'WATCH';
+        side = undefined; // Force Neutral for "Warning" state
         reason = `Approaching Golden Cross: EMAs converging (${Math.abs(separation).toFixed(2)}% apart)`;
     }
     // Approaching Death Cross
     else if (currentFast > currentSlow && Math.abs(separation) < 1 && separation < prevSeparation) {
         status = 'WATCH';
+        side = undefined; // Force Neutral for "Warning" state
         reason = `Approaching Death Cross: EMAs converging (${Math.abs(separation).toFixed(2)}% apart)`;
     }
     // Exit: Opposite crossover
@@ -117,7 +123,7 @@ export function strategyEMACrossover(candles: Candle[], options: EMACrossoverOpt
             fastEMA: currentFast,
             slowEMA: currentSlow,
             separation,
-            side,
+            side, // Will be undefined for WATCH -> Neutral (Gray) Dot
             crossoverType: currentFast > currentSlow ? 'GOLDEN' : 'DEATH'
         }
     };
