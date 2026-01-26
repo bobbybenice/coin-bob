@@ -13,8 +13,6 @@ const DEFAULT_SETTINGS: UserSettings = {
         favoritesOnly: false,
         minRsi: 0,
         maxRsi: 100,
-        minBobScore: 0,
-        maxBobScore: 100,
         oversold: false,
         goldenCross: false,
         aboveEma20: false,

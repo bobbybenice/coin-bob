@@ -46,8 +46,6 @@ export interface Asset {
     volume24h: number;
     marketCap: number;
     rsi: number;
-    bobScore: number;
-    scoreBreakdown?: ScoreComponent[];
     // Futures Data
     isPerpetual?: boolean;
     fundingRate?: number; // In percentage (e.g. 0.01)
@@ -76,8 +74,6 @@ export interface FilterCriteria {
     favoritesOnly: boolean;
     minRsi: number;
     maxRsi: number;
-    minBobScore: number;
-    maxBobScore?: number;
     // New Strategy Filters
     oversold: boolean;     // RSI < 30
     goldenCross: boolean;  // EMA 50 > EMA 200

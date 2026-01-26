@@ -1,10 +1,6 @@
-'use client';
-
-import { useState } from 'react';
 import { Play } from 'lucide-react';
 import { Asset, AssetTrends, UserSettings } from '@/lib/types';
 import { Button } from './Button';
-import { ScoreOverlay } from './ScoreOverlay';
 
 interface AssetRowProps {
     asset: Asset;
@@ -23,16 +19,8 @@ export default function AssetRow({
     settings,
     onAnalyze,
 }: AssetRowProps) {
-    const [overlay, setOverlay] = useState<{ show: boolean, x: number, y: number } | null>(null);
+    // Score Overlay Logic Removed --
 
-    const handleScoreClick = (e: React.MouseEvent) => {
-        e.stopPropagation();
-        if (overlay?.show) {
-            setOverlay(null);
-        } else {
-            setOverlay({ show: true, x: e.clientX, y: e.clientY });
-        }
-    };
 
     return (
         <tr
@@ -73,26 +61,6 @@ export default function AssetRow({
                 ))
             }
 
-            <td className="py-2.5 px-4 text-center cursor-pointer" onClick={handleScoreClick}>
-                <div className="flex items-center justify-center">
-                    {/* NOISE REDUCTION: Only show signal if Trigger is active */}
-                    {asset.trigger && asset.bobScore >= 70 ? (
-                        <div className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-500 border border-emerald-500/30 whitespace-nowrap shadow-[0_0_10px_rgba(16,185,129,0.2)] animate-pulse">
-                            STRONG BUY
-                        </div>
-                    ) : asset.trigger && asset.bobScore <= 30 ? (
-                        <div className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-500/20 text-rose-500 border border-rose-500/30 whitespace-nowrap shadow-[0_0_10px_rgba(244,63,94,0.2)] animate-pulse">
-                            STRONG SELL
-                        </div>
-                    ) : (
-                        <div className="text-[10px] font-mono text-zinc-700 select-none">
-                            WAIT
-                        </div>
-                    )}
-                </div>
-            </td>
-
-
             <td className="py-2.5 px-4 text-center">
                 <div className="flex items-center justify-center gap-2">
                     {/* Play Button - Navigate to Analyze */}
@@ -108,19 +76,6 @@ export default function AssetRow({
                     >
                         <Play className="w-4 h-4 fill-current" />
                     </Button>
-
-                    {/* Render Overlay inside a Portal-like behavior (fixed) but structurally valid */}
-                    {overlay && overlay.show && (
-                        <>
-                            <div className="fixed inset-0 z-40 bg-black/20 backdrop-blur-[1px]" onClick={(e) => { e.stopPropagation(); setOverlay(null); }} />
-                            <ScoreOverlay
-                                score={asset.bobScore}
-                                breakdown={asset.scoreBreakdown || []}
-                                onClose={() => setOverlay(null)}
-                                position={{ x: overlay.x, y: overlay.y }}
-                            />
-                        </>
-                    )}
                 </div>
             </td>
         </tr >

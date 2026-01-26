@@ -9,8 +9,7 @@ export const MOCK_ASSETS: Asset[] = [
         change24h: 2.14,
         volume24h: 35000000000,
         marketCap: 1200000000000,
-        rsi: 55.4,
-        bobScore: 78,
+        rsi: 55.4
     },
     {
         id: 'ethereum',
@@ -20,8 +19,7 @@ export const MOCK_ASSETS: Asset[] = [
         change24h: -1.05,
         volume24h: 15000000000,
         marketCap: 400000000000,
-        rsi: 48.2,
-        bobScore: 65,
+        rsi: 48.2
     },
     {
         id: 'solana',
@@ -31,8 +29,7 @@ export const MOCK_ASSETS: Asset[] = [
         change24h: 5.89,
         volume24h: 4000000000,
         marketCap: 65000000000,
-        rsi: 72.1,
-        bobScore: 92,
+        rsi: 72.1
     },
     {
         id: 'ripple',
@@ -43,7 +40,6 @@ export const MOCK_ASSETS: Asset[] = [
         volume24h: 1200000000,
         marketCap: 34000000000,
         rsi: 51.0,
-        bobScore: 45,
     },
     {
         id: 'cardano',
@@ -53,8 +49,7 @@ export const MOCK_ASSETS: Asset[] = [
         change24h: -0.89,
         volume24h: 500000000,
         marketCap: 16000000000,
-        rsi: 42.5,
-        bobScore: 40,
+        rsi: 42.5
     },
     {
         id: 'dogecoin',
@@ -64,8 +59,7 @@ export const MOCK_ASSETS: Asset[] = [
         change24h: 12.4,
         volume24h: 2000000000,
         marketCap: 23000000000,
-        rsi: 85.0,
-        bobScore: 50,
+        rsi: 85.0
     },
     {
         id: 'chainlink',
@@ -75,8 +69,7 @@ export const MOCK_ASSETS: Asset[] = [
         change24h: 3.21,
         volume24h: 800000000,
         marketCap: 10000000000,
-        rsi: 62.4,
-        bobScore: 88,
+        rsi: 62.4
     }
 ];
 

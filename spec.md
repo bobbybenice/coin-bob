@@ -16,12 +16,7 @@ CoinBob is a privacy-first, high-performance crypto analysis dashboard designed 
 
 ### 1. Real-Time Asset Screener
 The main dashboard provides a tabular view of crypto assets with real-time updates.
--   **Metrics**: Price, 24h Change, Volume, RSI (14), and **Bob Score**.
--   **Bob Score**: A proprietary 0-100 composite score derived from:
-    -   **Trend**: EMA alignment (20/50/200).
-    -   **Momentum**: RSI oversold/overbought conditions.
-    -   **Volatilty**: Bollinger Band positioning.
-    -   **Market Structure**: ICT concepts (Sweeps, FVGs).
+-   **Metrics**: Price, 24h Change, Volume, RSI (14).
 -   **Futures Data**: Toggleable view for Funding Rates and Open Interest (Perpetuals).
 
 ### 2. Analysis Engine & ICT Logic

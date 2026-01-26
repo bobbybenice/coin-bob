@@ -87,8 +87,27 @@ async function fetchHistoryBatch(symbols: string[], timeframe: Timeframe, isFutu
             const cached = localStorage.getItem(storageKey);
             if (cached) {
                 const parsed = JSON.parse(cached);
-                const ageValid = (now - parsed.timestamp) < 5 * 60 * 1000;
-                if (ageValid && parsed.data.length > 0) {
+                // FRESHNESS: 1 min
+                const ageValid = (now - parsed.timestamp) < 60 * 1000;
+
+                let gapCheck = true;
+                if (parsed.data.length > 0) {
+                    const lastCandle = parsed.data[parsed.data.length - 1];
+                    const timeframeMsMap: Record<string, number> = {
+                        '1m': 60 * 1000,
+                        '5m': 5 * 60 * 1000,
+                        '15m': 15 * 60 * 1000,
+                        '1h': 60 * 60 * 1000,
+                        '4h': 4 * 60 * 60 * 1000,
+                        '1d': 24 * 60 * 60 * 1000,
+                    };
+                    const intervalMs = timeframeMsMap[timeframe] || 60 * 1000;
+                    if ((now - lastCandle.time) > (3 * intervalMs)) {
+                        gapCheck = false;
+                    }
+                }
+
+                if (ageValid && gapCheck && parsed.data.length > 0) {
                     assetHistory[symbol] = parsed.data;
                     return;
                 }
@@ -145,8 +164,34 @@ export async function fetchHistory(symbol: string, timeframe: Timeframe) {
         const cached = localStorage.getItem(storageKey);
         if (cached) {
             const parsed: { data: Candle[], timestamp: number } = JSON.parse(cached);
-            const ageValid = (Date.now() - parsed.timestamp) < 5 * 60 * 1000;
-            if (ageValid && parsed.data.length > 0) {
+            // FRESHNESS CHECK: Strict 1 minute cache or dynamic based on timeframe?
+            // For high frequency, 1 min is safe.
+            const ageValid = (Date.now() - parsed.timestamp) < 60 * 1000;
+
+            // GAP CHECK: Check if the last candle in data is reasonably fresh
+            // If last candle time is older than 2 * interval, we have a gap.
+            let gapCheck = true;
+            if (parsed.data.length > 0) {
+                const lastCandle = parsed.data[parsed.data.length - 1];
+                // Approximate interval in ms
+                const timeframeMsMap: Record<string, number> = {
+                    '1m': 60 * 1000,
+                    '5m': 5 * 60 * 1000,
+                    '15m': 15 * 60 * 1000,
+                    '1h': 60 * 60 * 1000,
+                    '4h': 4 * 60 * 60 * 1000,
+                    '1d': 24 * 60 * 60 * 1000,
+                };
+                const intervalMs = timeframeMsMap[timeframe] || 60 * 1000;
+
+                // Allow 3 intervals of latency before forcing refetch
+                if ((Date.now() - lastCandle.time) > (3 * intervalMs)) {
+                    gapCheck = false;
+                    // console.log(`Cache has gap for ${symbol}. Expiring.`);
+                }
+            }
+
+            if (ageValid && gapCheck && parsed.data.length > 0) {
                 assetHistory[symbol] = parsed.data;
                 return;
             }
@@ -229,17 +274,10 @@ export function subscribeToBinanceStream(timeframe: Timeframe, isFuturesMode: bo
 
                         // Indicators & Strategies via Engine
                         const change24h = parseFloat(t.P);
-                        const analysis = analyzeAsset(history, change24h);
+                        const analysis = analyzeAsset(history);
                         // DEBUG: Check breakdown
-                        if (analysis.score > 60 && (!analysis.scoreBreakdown || analysis.scoreBreakdown.length === 0)) {
-                            console.warn(`[Binance] High Score ${analysis.score} but NO Breakdown!`, analysis);
-                        }
 
-
-                        // Bob Score Integration
-                        let score = analysis.score;
-                        // Manual boost removed (handled in analyzer)
-                        score = Math.min(100, Math.max(0, score));
+                        // Bob Score Integration - REMOVED
 
                         const ictResult = analysis.strategies['ICT'];
                         const ictMetadata = ictResult?.metadata as {
@@ -273,15 +311,13 @@ export function subscribeToBinanceStream(timeframe: Timeframe, isFuturesMode: bo
                             volume24h: parseFloat(t.v),
                             marketCap: 0,
                             rsi: analysis.indicators.rsi.value,
-                            bobScore: score,
                             ema20: analysis.indicators.ema20.value,
                             ema50: analysis.indicators.ema50.value,
                             ema200: analysis.indicators.ema200.value,
                             macd: analysis.indicators.macd.value,
                             bb: analysis.indicators.bb.value,
                             ictAnalysis: ictAnalysis,
-                            trigger: analysis.trigger,
-                            scoreBreakdown: analysis.scoreBreakdown
+                            trigger: analysis.trigger
                         };
 
                         if (existingIndex >= 0) {
@@ -303,7 +339,7 @@ export function subscribeToBinanceStream(timeframe: Timeframe, isFuturesMode: bo
                 callback([...latestAssets]);
                 hasUpdates = false;
             }
-        }, 1000);
+        }, 500);
 
         return () => {
             clearInterval(interval);
@@ -354,13 +390,9 @@ export function subscribeToBinanceStream(timeframe: Timeframe, isFuturesMode: bo
                     const history = assetHistory[normalizedSymbol];
 
                     // Indicators & Strategies via Engine
-                    const change24h = parseFloat(t.priceChangePercent);
-                    const analysis = analyzeAsset(history, change24h);
+                    const analysis = analyzeAsset(history);
 
-                    // Bob Score Integration
-                    let score = analysis.score;
-                    // Manual boost removed (handled in analyzer)
-                    score = Math.min(100, Math.max(0, score));
+                    // Bob Score Integration - REMOVED
 
                     const ictMetadata = analysis.strategies['ICT']?.metadata as {
                         sweep?: string;
@@ -391,7 +423,6 @@ export function subscribeToBinanceStream(timeframe: Timeframe, isFuturesMode: bo
                         volume24h: parseFloat(t.quoteVolume),
                         marketCap: 0,
                         rsi: analysis.indicators.rsi.value,
-                        bobScore: score, // DYNAMIC SCORE
                         ema20: analysis.indicators.ema20.value,
                         ema50: analysis.indicators.ema50.value,
                         ema200: analysis.indicators.ema200.value,
@@ -402,20 +433,19 @@ export function subscribeToBinanceStream(timeframe: Timeframe, isFuturesMode: bo
                         isPerpetual: true,
                         fundingRate: fRate,
                         openInterest: 0,
-                        nextFundingTime: funding?.nextTime,
-                        scoreBreakdown: analysis.scoreBreakdown
+                        nextFundingTime: funding?.nextTime
                     });
                 }
             }
 
-            // Order by BobScore desc
-            newAssets.sort((a, b) => b.bobScore - a.bobScore);
+            // Order by Volume desc for now
+            newAssets.sort((a, b) => b.volume24h - a.volume24h);
 
             callback(newAssets);
         };
 
         fetchFuturesData();
-        const interval = setInterval(fetchFuturesData, 5000);
+        const interval = setInterval(fetchFuturesData, 2000);
 
         return () => {
             isRunning = false;

@@ -12,7 +12,7 @@ import { Button } from './ui/Button';
 import { useRouter } from 'next/navigation';
 import { STRATEGIES } from '@/lib/engine/strategies';
 
-type SortField = 'price' | 'bobScore' | 'symbol';
+type SortField = 'price' | 'symbol';
 type SortDirection = 'asc' | 'desc';
 
 export default function AssetScreener() {
@@ -71,15 +71,13 @@ export default function AssetScreener() {
         }
       }
 
-      // 1. Favorites Only - REMOVED
+
 
       // 2. RSI Range
       if (settings.filters.minRsi !== undefined && asset.rsi < settings.filters.minRsi) return false;
       if (settings.filters.maxRsi !== undefined && asset.rsi > settings.filters.maxRsi) return false;
 
-      // 3. Bob Score
-      if (settings.filters.minBobScore !== undefined && asset.bobScore < settings.filters.minBobScore) return false;
-      if (settings.filters.maxBobScore !== undefined && asset.bobScore > settings.filters.maxBobScore) return false;
+
 
 
       // 4. Advanced Strategies
@@ -238,9 +236,6 @@ export default function AssetScreener() {
                   </th>
                 ))}
 
-                <th className="py-3 px-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider text-center">
-                  Signal Probability
-                </th>
                 <th className="py-3 px-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider text-center">
                   Analyze
                 </th>

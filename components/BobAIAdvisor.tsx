@@ -28,16 +28,9 @@ export default function BobAIAdvisor({ contextOverride }: { contextOverride?: st
         messages.push(`Analyzing market on the [${settings.timeframe}] chart...`);
 
         const highRsi = assets.filter(a => a.rsi > 70).map(a => a.symbol).slice(0, 5);
-        const highPotential = assets.filter(a => a.bobScore > 80).map(a => a.symbol).slice(0, 5);
 
-        // 1. Market Momentum
-        if (highPotential.length > 0) {
-            messages.push(`Market Analysis: ${highPotential.join(', ')} are showing strong momentum (Bob Score > 80).`);
-        } else {
-            messages.push(`Market Analysis: No strong momentum signals detected right now.`);
-        }
 
-        // 2. Cautionary Indicators
+        // 1. Cautionary Indicators
         if (highRsi.length > 0) {
             messages.push(`Caution: ${highRsi.join(', ')} are currently overbought (RSI > 70).`);
         } else {

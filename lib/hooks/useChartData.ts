@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Candle, Timeframe } from '@/lib/types';
 import { fetchHistoricalData } from '@/lib/services/market';
 import { FUTURES_SYMBOL_MAP } from '@/lib/services/futures';
@@ -32,6 +32,19 @@ function convertTimeframe(tf: Timeframe): string {
 }
 
 /**
+ * Helper to deduplicate and sort candles by time
+ * This prevents chart errors where timestamps must be unique and ascending
+ */
+function deduplicateAndSort(candles: Candle[]): Candle[] {
+    if (!candles || candles.length === 0) return [];
+
+    const map = new Map<number, Candle>();
+    candles.forEach(c => map.set(c.time, c));
+
+    return Array.from(map.values()).sort((a, b) => a.time - b.time);
+}
+
+/**
  * Hook to fetch and cache chart data (klines) from Binance (Spot or Futures)
  */
 export function useChartData(symbol: string, timeframe: Timeframe, isFutures: boolean, limit: number = 500) {
@@ -39,7 +52,18 @@ export function useChartData(symbol: string, timeframe: Timeframe, isFutures: bo
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
+    // Keep track of the latest candles ref to avoid stale closures in WS callbacks
+    const candlesRef = useRef<Candle[]>([]);
     useEffect(() => {
+        candlesRef.current = candles;
+    }, [candles]);
+
+    useEffect(() => {
+        // Reset state when inputs change
+        setCandles([]);
+        setIsLoading(true);
+        setError(null);
+
         // Cache Key needs to include futures flag
         const cacheKey = `${isFutures ? 'F_' : 'S_'}${symbol}_${timeframe}_${limit}`;
 
@@ -62,24 +86,18 @@ export function useChartData(symbol: string, timeframe: Timeframe, isFutures: bo
         const cached = cache.get(cacheKey);
         const now = Date.now();
 
-        if (cached && now - cached.timestamp < CACHE_DURATION) {
-            setCandles(cached.data);
-            setIsLoading(false);
-        }
-
         // Fetch fresh historical data
         const fetchData = async () => {
-            // Only set loading if we didn't have cache, or if cache is old
-            if (!cached || now - cached.timestamp >= CACHE_DURATION) {
-                setIsLoading(true);
+            if (cached && now - cached.timestamp < CACHE_DURATION) {
+                setCandles(cached.data);
+                setIsLoading(false);
+                return;
             }
-            setError(null);
 
             try {
                 const interval = convertTimeframe(timeframe);
 
                 // Use Server Action with multiple fallbacks (Binance Global -> Coinbase -> Binance US)
-                // This replaces the direct client-side fetch which was brittle
                 const fetchedCandles = await fetchHistoricalData(baseSymbol, interval, isFutures);
 
                 if (!isMounted) return;
@@ -88,13 +106,16 @@ export function useChartData(symbol: string, timeframe: Timeframe, isFutures: bo
                     throw new Error('No Data Found (Check Network/Symbol)');
                 }
 
+                // Ensure data is clean before using
+                const cleanData = deduplicateAndSort(fetchedCandles);
+
                 // Update cache
                 cache.set(cacheKey, {
-                    data: fetchedCandles,
+                    data: cleanData,
                     timestamp: Date.now()
                 });
 
-                setCandles(fetchedCandles);
+                setCandles(cleanData);
             } catch (err) {
                 if (isMounted) {
                     setError(err instanceof Error ? err.message : 'Failed to load chart data');
@@ -115,30 +136,33 @@ export function useChartData(symbol: string, timeframe: Timeframe, isFutures: bo
             const bufferedCandle = pendingCandle;
 
             setCandles(prev => {
-                if (prev.length === 0) return [bufferedCandle];
-                const lastCandle = prev[prev.length - 1];
+                const currentData = prev.length > 0 ? prev : candlesRef.current;
 
-                // Check if it's an update to the current candle
+                if (currentData.length === 0) return [bufferedCandle];
+
+                // Merge strategy:
+                // 1. If timestamp exists, overwrite
+                // 2. If timestamp is new, append
+                // 3. Ensure strictly sorted
+
+                const lastCandle = currentData[currentData.length - 1];
+
+                // Optimization: Update in place if it's the same latest candle
                 if (lastCandle.time === bufferedCandle.time) {
-                    // Only update if something changed (optimization)
-                    if (lastCandle.close === bufferedCandle.close &&
-                        lastCandle.volume === bufferedCandle.volume &&
-                        lastCandle.high === bufferedCandle.high &&
-                        lastCandle.low === bufferedCandle.low) {
-                        return prev;
-                    }
-
-                    const newCandles = [...prev];
-                    newCandles[prev.length - 1] = bufferedCandle;
-                    return newCandles;
+                    // Only update if values changed significantly or it's a live update
+                    const updated = [...currentData];
+                    updated[currentData.length - 1] = bufferedCandle;
+                    return updated;
                 }
 
-                // New candle started
+                // If it's a new candle, append it
                 if (bufferedCandle.time > lastCandle.time) {
-                    return [...prev, bufferedCandle];
+                    return [...currentData, bufferedCandle];
                 }
 
-                return prev;
+                // If it's older data (late arrival), we need to do a full sort join
+                // This is rare for live streams but possible
+                return deduplicateAndSort([...currentData, bufferedCandle]);
             });
             pendingCandle = null;
             throttleTimer = null;
@@ -154,25 +178,29 @@ export function useChartData(symbol: string, timeframe: Timeframe, isFutures: bo
             ws = new WebSocket(wsUrl);
 
             ws.onmessage = (event) => {
-                const message = JSON.parse(event.data);
-                if (message.e === 'kline') {
-                    const k = message.k;
-                    const newCandle: Candle = {
-                        time: k.t,
-                        open: parseFloat(k.o),
-                        high: parseFloat(k.h),
-                        low: parseFloat(k.l),
-                        close: parseFloat(k.c),
-                        volume: parseFloat(k.v)
-                    };
+                try {
+                    const message = JSON.parse(event.data);
+                    if (message.e === 'kline') {
+                        const k = message.k;
+                        const newCandle: Candle = {
+                            time: k.t,
+                            open: parseFloat(k.o),
+                            high: parseFloat(k.h),
+                            low: parseFloat(k.l),
+                            close: parseFloat(k.c),
+                            volume: parseFloat(k.v)
+                        };
 
-                    // Update local buffer
-                    pendingCandle = newCandle;
+                        // Update local buffer
+                        pendingCandle = newCandle;
 
-                    // Schedule flush if not already scheduled
-                    if (!throttleTimer) {
-                        throttleTimer = setTimeout(flushBuffer, 200); // 200ms throttle
+                        // Schedule flush if not already scheduled
+                        if (!throttleTimer) {
+                            throttleTimer = setTimeout(flushBuffer, 200); // 200ms throttle
+                        }
                     }
+                } catch (e) {
+                    console.error('WS Parse Error', e);
                 }
             };
 
@@ -190,3 +218,4 @@ export function useChartData(symbol: string, timeframe: Timeframe, isFutures: bo
 
     return { candles, isLoading, error };
 }
+
