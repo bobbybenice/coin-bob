@@ -92,7 +92,7 @@ export default function AnalysisEngine({ isOpen = true, onToggle }: AnalysisEngi
                                     const allSelected = allNames.every(n => settings.visibleStrategies?.includes(n));
                                     toggleAllStrategies(!allSelected, allNames);
                                 }}
-                                className="text-[10px] bg-secondary/50 hover:bg-secondary text-foreground px-2 py-0.5 rounded transition-colors"
+                                className="cursor-pointer text-[10px] bg-secondary/50 hover:bg-secondary text-foreground px-2 py-0.5 rounded transition-colors"
                             >
                                 {getAllStrategyNames().every(n => settings.visibleStrategies?.includes(n)) ? 'Deselect All' : 'Select All'}
                             </button>

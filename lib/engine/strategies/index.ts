@@ -7,6 +7,7 @@ import { strategyVolumeBreakout } from './volume-breakout';
 import { strategySupportResistance } from './support-resistance';
 import { strategyGolden } from './golden-strategy';
 import { strategyICT } from './ict';
+import { strategyConvergenceOB } from './convergenceOB';
 
 
 
@@ -123,6 +124,18 @@ export const STRATEGIES: Record<StrategyName, StrategyConfig> = {
         description: 'Gap detection (FVG) and Liquidity Sweep logic',
         execute: strategyICT,
         defaultOptions: {}
+    },
+    CONVERGENCE_OB: {
+        name: 'CONVERGENCE_OB',
+        displayName: 'Convergence-OB',
+        description: 'High-probability reversal: RSI/MFI Extremes + Order Block',
+        execute: strategyConvergenceOB,
+        defaultOptions: {
+            rsiOversold: 20,
+            mfiOversold: 20,
+            rsiOverbought: 80,
+            mfiOverbought: 80
+        }
     }
 };
 
@@ -174,5 +187,6 @@ export {
     strategyVolumeBreakout,
     strategySupportResistance,
     strategyGolden,
-    strategyICT
+    strategyICT,
+    strategyConvergenceOB
 };

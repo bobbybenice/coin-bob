@@ -195,3 +195,102 @@ export function strategyICT(candles: Candle[]): StrategyResponse {
         }
     };
 }
+
+export interface OrderBlock {
+    high: number;
+    low: number;
+    top: number; // For visualization/overlap check (same as high)
+    bottom: number; // For visualization/overlap check (same as low)
+    type: 'bullish' | 'bearish';
+    candleIndex: number;
+    timestamp: number;
+    mitigated: boolean;
+}
+
+export function detectOrderBlocks(candles: Candle[]): OrderBlock[] {
+    const orderBlocks: OrderBlock[] = [];
+    if (candles.length < 20) return orderBlocks;
+
+    // Simple MSB detection + OB identification
+    // We iterate through candles to find potential swing points that break structure
+    // This is a simplified implementation for resilience and speed
+
+    let swingHigh = candles[0].high;
+    let swingLow = candles[0].low;
+
+    // Look back period for swings
+    const swingLookback = 5;
+
+    for (let i = swingLookback; i < candles.length - 2; i++) {
+        const current = candles[i];
+
+        // Bullish MSB logic: Break above a previous Swing High
+        // If we break a swing high, the lowest down-candle before this up-move is the Bullish OB
+        if (current.close > swingHigh) {
+            // Find the last down candle before the move started
+            // We search backwards from i
+            for (let k = i; k > Math.max(0, i - 20); k--) {
+                const candle = candles[k];
+                if (candle.close < candle.open) { // Down candle
+                    // This is our Order Block candidate
+                    orderBlocks.push({
+                        high: candle.high,
+                        low: candle.low,
+                        top: candle.high,
+                        bottom: candle.low,
+                        type: 'bullish',
+                        candleIndex: k,
+                        timestamp: candle.time,
+                        mitigated: false
+                    });
+                    break; // Found the OB
+                }
+            }
+            swingHigh = current.high; // Update context
+        } else if (current.high > swingHigh) {
+            swingHigh = current.high;
+        }
+
+        // Bearish MSB logic: Break below a previous Swing Low
+        if (current.close < swingLow) {
+            // Find the last up candle before the move started
+            for (let k = i; k > Math.max(0, i - 20); k--) {
+                const candle = candles[k];
+                if (candle.close > candle.open) { // Up candle
+                    orderBlocks.push({
+                        high: candle.high,
+                        low: candle.low,
+                        top: candle.high,
+                        bottom: candle.low,
+                        type: 'bearish',
+                        candleIndex: k,
+                        timestamp: candle.time,
+                        mitigated: false
+                    });
+                    break;
+                }
+            }
+            swingLow = current.low;
+        } else if (current.low < swingLow) {
+            swingLow = current.low;
+        }
+    }
+
+    // Filter mitigated (simple check similar to FVG)
+    // We only want active Order Blocks
+    // A simplified check: if price closed beyond the OB, it's mitigated (broken)
+    const activeOBs = orderBlocks.filter(ob => {
+        // Check future candles
+        for (let i = ob.candleIndex + 1; i < candles.length; i++) {
+            const c = candles[i];
+            if (ob.type === 'bullish') {
+                if (c.close < ob.low) return false; // Broken/Mitigated invalidly
+            } else {
+                if (c.close > ob.high) return false; // Broken/Mitigated invalidly
+            }
+        }
+        return true;
+    });
+
+    return activeOBs;
+}

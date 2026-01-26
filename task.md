@@ -19,3 +19,9 @@
     - [x] Update `AnalysisEngine` with Strategy Selector
     - [x] Update `AssetScreener` and `AssetRow` for dynamic rendering
     - [x] Set defaults: RSI/MFI and Bollinger visible by default
+- [x] Implement Convergence-OB Strategy
+    - [x] Strategy Logic (RSI + MFI + OB)
+    - [x] Order Block Detection in `ict.ts`
+    - [x] Integration with Analyzer & Backtester
+    - [x] UI: "Convergence" Tag in Screener
+    - [x] UI: Diamond Markers (Green/Red Circles) in Chart

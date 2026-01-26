@@ -30,6 +30,11 @@ export default function AssetRow({
                 <div className="flex flex-col">
                     <div className="font-bold text-sm text-foreground flex items-center gap-1.5">
                         {asset.symbol}
+                        {trend?.strategies?.['CONVERGENCE_OB'] && Object.values(trend.strategies['CONVERGENCE_OB']).some(s => s === 'LONG' || s === 'SHORT') && (
+                            <span className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-500 text-[9px] uppercase font-bold tracking-wider border border-amber-500/30">
+                                Convergence
+                            </span>
+                        )}
                     </div>
                     <div className="text-[10px] text-muted-foreground font-medium">{asset.name}</div>
                 </div>

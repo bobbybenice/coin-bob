@@ -27,6 +27,7 @@ export function useStrategyMarkers(
             if (result.status === 'ENTRY' || result.status === 'EXIT') {
                 const candle = candles[i];
                 const isLong = (result.metadata?.side === 'LONG' || result.metadata?.sweep === 'BULLISH' || (result.metadata?.fvg && result.metadata.fvg === 'BULLISH'));
+                const isConvergence = !!result.metadata?.convergenceOB;
 
                 let color: string;
                 let shape: SeriesMarker<Time>['shape'];
@@ -36,7 +37,21 @@ export function useStrategyMarkers(
                 // Unified Marker Logic (User request: "Remove 'Exit' marker and only use 'LONG' and 'SHORT'")
                 // We treat both ENTRY and EXIT as directional signals derived from metadata.
 
-                if (isLong) {
+                if (isConvergence) {
+                    // Convergence-OB Strategy: High Probability Diamond
+                    // Using circle as proxy for diamond with distinct colors (Neon)
+                    if (isLong) {
+                        color = '#00ff9d'; // Neon Green
+                        shape = 'circle';
+                        position = 'belowBar';
+                        text = 'DIAMOND LONG'; // Explicit text as per user request (User said "Plot a Green Diamond", text adds clarity)
+                    } else {
+                        color = '#ff0055'; // Neon Red
+                        shape = 'circle';
+                        position = 'aboveBar';
+                        text = 'DIAMOND SHORT';
+                    }
+                } else if (isLong) {
                     color = '#10b981'; // Green
                     shape = 'arrowUp';
                     position = 'belowBar';

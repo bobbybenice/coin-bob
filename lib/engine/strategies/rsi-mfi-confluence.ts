@@ -65,7 +65,7 @@ export function strategyRSIMFI(candles: Candle[], options: RSIMFIOptions = {}): 
             stopLoss,
             takeProfit
         },
-        reason,
+        reason: reason || `RSI: ${rsi.value.toFixed(2)} | MFI: ${mfi.value.toFixed(2)}`,
         metadata: {
             rsi: rsi.value,
             mfi: mfi.value,

@@ -96,7 +96,8 @@ export type StrategyName =
     | 'VOLUME_BREAKOUT'
     | 'SUPPORT_RESISTANCE'
     | 'GOLDEN_STRATEGY'
-    | 'ICT';
+    | 'ICT'
+    | 'CONVERGENCE_OB';
 
 export interface UserSettings {
     favorites: string[];

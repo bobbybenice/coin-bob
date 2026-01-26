@@ -1,7 +1,7 @@
 import { Asset, Candle, Timeframe } from './types';
 import { WATCHLIST, SYMBOL_MAP } from './constants';
 import { fetchHistoricalData, fetchHistoricalDataBatch } from '@/lib/services/market';
-import { fetchFuturesDailyStats, fetchFundingRates, fetchFuturesKlines } from '@/lib/services/futures';
+import { fetchFuturesDailyStats, fetchFundingRates, fetchFuturesKlines, FUTURES_SYMBOL_MAP } from '@/lib/services/futures';
 import { analyzeAsset } from '@/lib/engine/analyzer';
 
 // [Helper functions safeSetItem, pruneCache omitted, assuming they are unchanged or I should include them if replace_file_content needs full context or line ranges. 
@@ -92,21 +92,32 @@ export function subscribeToBinanceStream(timeframe: Timeframe, isFuturesMode: bo
     let ws: WebSocket | null = null;
     let isRunning = true;
     let hasUpdates = false;
+    let retryCount = 0;
+    const MAX_RETRIES = 5;
 
     // K-Line stream URL construction
     // Format: <symbol>@kline_<interval>
     // Max streams per connection is 1024 (we have ~50)
-    const streams = WATCHLIST.map(s => `${s.toLowerCase()}@kline_${timeframe}`).join('/');
+
+    // Correctly map symbols for Futures (e.g. PEPE -> 1000PEPE)
+    const streams = WATCHLIST.map(s => {
+        const symbol = isFuturesMode ? (FUTURES_SYMBOL_MAP[s] || s) : s;
+        return `${symbol.toLowerCase()}@kline_${timeframe}`;
+    }).join('/');
+
     const baseURL = isFuturesMode ? 'wss://fstream.binance.com' : 'wss://stream.binance.com:9443';
+    // Use /stream endpoint for multiplexing
     const wsUrl = `${baseURL}/stream?streams=${streams}`;
 
     const connect = () => {
         if (!isRunning) return;
 
+        console.log(`[Binance WS] Connecting to ${isFuturesMode ? 'Futures' : 'Spot'}...`);
         ws = new WebSocket(wsUrl);
 
         ws.onopen = () => {
-            // console.log(`Connected to ${isFuturesMode ? 'Futures' : 'Spot'} K-Line Stream (${timeframe})`);
+            console.log(`[Binance WS] Connected (${timeframe})`);
+            retryCount = 0; // Reset retry on success
         };
 
         ws.onmessage = (event) => {
@@ -261,8 +272,14 @@ export function subscribeToBinanceStream(timeframe: Timeframe, isFuturesMode: bo
 
         ws.onclose = () => {
             if (isRunning) {
-                // console.log("Reconnecting stream in 1s...");
-                setTimeout(connect, 1000);
+                if (retryCount < MAX_RETRIES) {
+                    retryCount++;
+                    const delay = 1000 * Math.pow(1.5, retryCount); // Backoff
+                    console.log(`[Binance WS] Closed. Reconnecting in ${delay}ms... (Attempt ${retryCount}/${MAX_RETRIES})`);
+                    setTimeout(connect, delay);
+                } else {
+                    console.error(`[Binance WS] Max retries exceeded. Connection failed.`);
+                }
             }
         };
     };
