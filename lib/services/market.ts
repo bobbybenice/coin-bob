@@ -5,13 +5,36 @@ import { Candle } from '@/lib/types';
 
 export async function fetchHistoricalData(symbol: string, interval: string = '1d', isFutures: boolean = false): Promise<Candle[]> {
     if (isFutures) {
-        // Use the shared robust futures fetcher (matches Client logic)
+        // Direct Futures Fetch (Inlined for Robustness)
+        // Map for Spot symbols -> Futures symbols (Binance uses 1000 prefix for meme coins)
+        const FUTURES_SYMBOL_MAP: Record<string, string> = {
+            'BONKUSDT': '1000BONKUSDT',
+            'PEPEUSDT': '1000PEPEUSDT',
+            'SHIBUSDT': '1000SHIBUSDT',
+            'FLOKIUSDT': '1000FLOKIUSDT',
+            'LUNCUSDT': '1000LUNCUSDT',
+            'XECUSDT': '1000XECUSDT',
+            'SATSUSDT': '1000SATSUSDT',
+            'RATSUSDT': '1000RATSUSDT'
+        };
+
+        const querySymbol = FUTURES_SYMBOL_MAP[symbol] || symbol;
+        const url = `https://fapi.binance.com/fapi/v1/klines?symbol=${querySymbol}&interval=${interval}&limit=500`;
+
         try {
-            // Dynamic import to avoid circular dep if futures imports market (it doesn't seem to, but safe)
-            // Check imports: market -> futures is fine.
-            const { fetchFuturesKlines } = await import('./futures');
-            const data = await fetchFuturesKlines(symbol, interval, 500);
-            return data;
+            // No User-Agent header (Standard fetch)
+            const res = await fetch(url, { cache: 'no-store' });
+            if (res.ok) {
+                const json = await res.json();
+                return Array.isArray(json) ? json.map((d: any[]) => ({
+                    time: d[0],
+                    open: parseFloat(d[1]),
+                    high: parseFloat(d[2]),
+                    low: parseFloat(d[3]),
+                    close: parseFloat(d[4]),
+                    volume: parseFloat(d[5])
+                })) : [];
+            }
         } catch (e) {
             console.error(`Futures fetch failed for ${symbol}`, e);
             return [];
