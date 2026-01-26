@@ -29,8 +29,10 @@ export function strategyRSIMFI(candles: Candle[], options: RSIMFIOptions = {}): 
         };
     }
 
-    // Current State
-    const current = candles[candles.length - 1];
+    // Current State (Closed Candle)
+    // Use length - 2 to prevent flickering
+    const current = candles[candles.length - 2];
+    if (!current) return { status: 'IDLE', priceLevels: {}, reason: 'Insufficient Data' };
 
     let status: StrategyResponse['status'] = 'IDLE';
     const entryPrice = current.close;

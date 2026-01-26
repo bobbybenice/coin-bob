@@ -38,7 +38,8 @@ export function strategyEMACrossover(candles: Candle[], options: EMACrossoverOpt
         };
     }
 
-    const current = candles[candles.length - 1];
+    const current = candles[candles.length - 2];
+    if (!current) return { status: 'IDLE', priceLevels: {}, reason: 'Insufficient Data' };
 
     // Get previous EMAs to detect crossover
     let prevFastEMA = NaN;

@@ -42,7 +42,10 @@ export function strategyBollingerBounce(candles: Candle[], options: BollingerBou
         };
     }
 
-    const current = candles[candles.length - 1];
+    // Use Previous (Closed) Candle for Stable Signals
+    // "Current" live candle causes flickering signals that vanish on chart reload.
+    const current = candles[candles.length - 2];
+    if (!current) return { status: 'IDLE', priceLevels: {}, reason: 'Insufficient Data' };
     const { upper, middle, lower } = bb.value;
     const rsiValue = rsi.value;
 

@@ -64,8 +64,9 @@ export function strategyGolden(candles: Candle[], options: GoldenStrategyOptions
     const currentATR = atr.value;
     const currentADX = adx.value.adx;
 
-    const current = candles[candles.length - 1];
-    const prev = candles[candles.length - 2];
+    const current = candles[candles.length - 2];
+    const prev = candles[candles.length - 3];
+    if (!current || !prev) return { status: 'IDLE', priceLevels: {}, reason: 'Insufficient Data' };
 
     const prevBB = calculateBollingerBands(candles.slice(0, -1), bbPeriod, bbStdDev); // Recalculate for prev? Or optimize?
     // Optimization: The manual BB calc returns just the latest. 
