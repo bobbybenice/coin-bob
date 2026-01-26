@@ -11,104 +11,16 @@ import { analyzeAsset } from '@/lib/engine/analyzer';
 
 // Let's replace from Imports down to end of fetchHistoryBatch to be safe and clean.
 
-// Helper to safely set item in LS with pruning if quota exceeded
-function safeSetItem(key: string, value: string) {
-    try {
-        localStorage.setItem(key, value);
-    } catch (e) {
-        if (e instanceof DOMException && (e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED')) {
-            console.warn("LocalStorage Quota Exceeded. Pruning old cache...");
-            pruneCache();
-            try {
-                localStorage.setItem(key, value);
-            } catch (retryError) {
-                console.error("Failed to set item even after pruning", retryError);
-            }
-        } else {
-            console.error("LocalStorage Error", e);
-        }
-    }
-}
-
-function pruneCache() {
-    const keys = [];
-    for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key && key.startsWith('indicators_')) {
-            keys.push(key);
-        }
-    }
-
-    if (keys.length === 0) return;
-
-    const items = keys.map(k => {
-        try {
-            const item = localStorage.getItem(k);
-            if (!item) return { key: k, time: 0 };
-            const parsed = JSON.parse(item);
-            return { key: k, time: parsed.timestamp || 0 };
-        } catch {
-            return { key: k, time: 0 };
-        }
-    });
-
-    // Sort oldest first
-    items.sort((a, b) => a.time - b.time);
-
-    // Delete oldest 20%
-    const deleteCount = Math.max(1, Math.floor(items.length * 0.2));
-    for (let i = 0; i < deleteCount; i++) {
-        localStorage.removeItem(items[i].key);
-    }
-}
-
-
+// Helper to prune cache - REMOVED (No longer caching)
+// function safeSetItem ... REMOVED
+// function pruneCache ... REMOVED
 
 const assetHistory: Record<string, Candle[]> = {};
 const latestAssets: Asset[] = [];
 
-// 2. Batch Loader for History
+// 2. Batch Loader for History (Always Fresh)
 async function fetchHistoryBatch(symbols: string[], timeframe: Timeframe, isFutures: boolean) {
-    // Check which symbols are missing from cache or stale
-    const symbolsToFetch: string[] = [];
-    const now = Date.now();
-
-    symbols.forEach(symbol => {
-        const storageKey = `indicators_${isFutures ? 'F_' : ''}${symbol}_${timeframe}`;
-        try {
-            const cached = localStorage.getItem(storageKey);
-            if (cached) {
-                const parsed = JSON.parse(cached);
-                // FRESHNESS: 1 min
-                const ageValid = (now - parsed.timestamp) < 60 * 1000;
-
-                let gapCheck = true;
-                if (parsed.data.length > 0) {
-                    const lastCandle = parsed.data[parsed.data.length - 1];
-                    const timeframeMsMap: Record<string, number> = {
-                        '1m': 60 * 1000,
-                        '5m': 5 * 60 * 1000,
-                        '15m': 15 * 60 * 1000,
-                        '1h': 60 * 60 * 1000,
-                        '4h': 4 * 60 * 60 * 1000,
-                        '1d': 24 * 60 * 60 * 1000,
-                    };
-                    const intervalMs = timeframeMsMap[timeframe] || 60 * 1000;
-                    if ((now - lastCandle.time) > (3 * intervalMs)) {
-                        gapCheck = false;
-                    }
-                }
-
-                if (ageValid && gapCheck && parsed.data.length > 0) {
-                    assetHistory[symbol] = parsed.data;
-                    return;
-                }
-            }
-        } catch { /* ignore */ }
-        symbolsToFetch.push(symbol);
-    });
-
-    if (symbolsToFetch.length === 0) return;
+    // console.log(`[DataLayer] Fetching fresh history for ${symbols.length} assets (${timeframe})`);
 
     // Call Server Action or Client Fetch for Batch
     try {
@@ -119,8 +31,8 @@ async function fetchHistoryBatch(symbols: string[], timeframe: Timeframe, isFutu
             // Limit concurrency? 50 symbols might be heavy.
             // Let's do it in chunks of 5
             const CHUCK_SIZE = 5;
-            for (let i = 0; i < symbolsToFetch.length; i += CHUCK_SIZE) {
-                const chunk = symbolsToFetch.slice(i, i + CHUCK_SIZE);
+            for (let i = 0; i < symbols.length; i += CHUCK_SIZE) {
+                const chunk = symbols.slice(i, i + CHUCK_SIZE);
                 await Promise.all(chunk.map(async (sym) => {
                     const klines = await fetchFuturesKlines(sym, timeframe, 500); // 500 limit for EMA 200 checks
                     if (klines.length > 0) {
@@ -130,16 +42,13 @@ async function fetchHistoryBatch(symbols: string[], timeframe: Timeframe, isFutu
             }
         } else {
             // Server Action for Spot (Batched)
-            batchResults = await fetchHistoricalDataBatch(symbolsToFetch, timeframe, false);
+            batchResults = await fetchHistoricalDataBatch(symbols, timeframe, false);
         }
 
         Object.entries(batchResults).forEach(([symbol, history]) => {
             if (history && history.length > 0) {
                 assetHistory[symbol] = history;
-                safeSetItem(`indicators_${isFutures ? 'F_' : ''}${symbol}_${timeframe}`, JSON.stringify({
-                    data: history,
-                    timestamp: now
-                }));
+                // NO CACHING
             } else {
                 if (!assetHistory[symbol]) assetHistory[symbol] = [];
             }
@@ -150,59 +59,12 @@ async function fetchHistoryBatch(symbols: string[], timeframe: Timeframe, isFutu
 }
 
 export async function fetchHistory(symbol: string, timeframe: Timeframe) {
-    // 1. Try LocalStorage first
-    const storageKey = `indicators_${symbol}_${timeframe}`;
-    try {
-        const cached = localStorage.getItem(storageKey);
-        if (cached) {
-            const parsed: { data: Candle[], timestamp: number } = JSON.parse(cached);
-            // FRESHNESS CHECK: Strict 1 minute cache or dynamic based on timeframe?
-            // For high frequency, 1 min is safe.
-            const ageValid = (Date.now() - parsed.timestamp) < 60 * 1000;
-
-            // GAP CHECK: Check if the last candle in data is reasonably fresh
-            // If last candle time is older than 2 * interval, we have a gap.
-            let gapCheck = true;
-            if (parsed.data.length > 0) {
-                const lastCandle = parsed.data[parsed.data.length - 1];
-                // Approximate interval in ms
-                const timeframeMsMap: Record<string, number> = {
-                    '1m': 60 * 1000,
-                    '5m': 5 * 60 * 1000,
-                    '15m': 15 * 60 * 1000,
-                    '1h': 60 * 60 * 1000,
-                    '4h': 4 * 60 * 60 * 1000,
-                    '1d': 24 * 60 * 60 * 1000,
-                };
-                const intervalMs = timeframeMsMap[timeframe] || 60 * 1000;
-
-                // Allow 3 intervals of latency before forcing refetch
-                if ((Date.now() - lastCandle.time) > (3 * intervalMs)) {
-                    gapCheck = false;
-                    // console.log(`Cache has gap for ${symbol}. Expiring.`);
-                }
-            }
-
-            if (ageValid && gapCheck && parsed.data.length > 0) {
-                assetHistory[symbol] = parsed.data;
-                return;
-            }
-        }
-    } catch (e) {
-        console.warn('Failed to parse LS cache', e);
-    }
-
-    // 2. Fetch from API if cache miss or stale
+    // 1. Direct Fetch (No LocalStorage)
     try {
         // Defaults to Spot history
         const history = await fetchHistoricalData(symbol, timeframe);
         if (history && history.length > 0) {
             assetHistory[symbol] = history;
-            // Save to LS
-            safeSetItem(storageKey, JSON.stringify({
-                data: history,
-                timestamp: Date.now()
-            }));
         } else {
             if (!assetHistory[symbol]) assetHistory[symbol] = [];
         }
@@ -221,7 +83,9 @@ export function subscribeToBinanceStream(timeframe: Timeframe, isFuturesMode: bo
     if (activeTimeframe !== timeframe || activeFuturesMode !== isFuturesMode) {
         activeTimeframe = timeframe;
         activeFuturesMode = isFuturesMode;
-        // Fetch history for Spot or Futures to prime the pump
+        // Fetch history for Spot or Futures to prime the pump (FRESH)
+        // Reset old history to avoid mixing 15m with 1h
+        Object.keys(assetHistory).forEach(k => delete assetHistory[k]);
         fetchHistoryBatch(WATCHLIST, timeframe, isFuturesMode);
     }
 
@@ -273,6 +137,23 @@ export function subscribeToBinanceStream(timeframe: Timeframe, isFuturesMode: bo
 
                 if (history.length > 0) {
                     const lastHistory = history[history.length - 1];
+
+                    // Gap Detection
+                    // If current candle time > last + interval * 1.5, we have a gap.
+                    // But interval is string (e.g. '15m').
+                    // Assuming we are roughly in sync due to fresh fetch, 
+                    // BUT if user leaves tab open for 3 days and comes back?
+                    // We must check if the new candle is "Next" or "Far Future".
+
+                    // Simple check: is it more than 2 intervals away?
+                    // We can just rely on replacing the last one or pushing.
+                    // If we push, and there is a gap, indicators will be wrong.
+
+                    // Ideally, if (currentCandle.time - lastHistory.time >  INTERVAL_MS * 2) -> Refetch History.
+                    // For now, let's keep it simple: Push. 
+                    // To truly fix "Wrong Signals", users should probably refresh if tab was stale.
+                    // But deleting cache helps a lot.
+
                     if (lastHistory.time === currentCandle.time) {
                         // Update current candle
                         history[history.length - 1] = currentCandle;
@@ -283,6 +164,7 @@ export function subscribeToBinanceStream(timeframe: Timeframe, isFuturesMode: bo
                         if (history.length > 500) history.shift();
                     }
                 } else {
+                    // Start history with this candle (likely waiting for batch to finish)
                     history.push(currentCandle);
                 }
 

@@ -122,7 +122,11 @@ export function ChartInstance({
         const candleSeries = chart.addSeries(CandlestickSeries, {
             upColor: '#10b981',
             downColor: '#ef4444',
-            borderVisible: false,
+            borderVisible: true,
+            wickVisible: true,
+            borderColor: '#10b981', // Match up color for green borders
+            borderUpColor: '#10b981',
+            borderDownColor: '#ef4444',
             wickUpColor: '#10b981',
             wickDownColor: '#ef4444',
         });
