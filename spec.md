@@ -11,6 +11,10 @@ CoinBob is a privacy-first, high-performance crypto analysis dashboard designed 
 -   **Data Fetching**: SWR (Stale-While-Revalidate), Binance Public API
 -   **Charting**: Lightweight Charts (TradingView)
 -   **Analysis**: `technicalindicators` library, Custom ICT Engine
+-   **Security**: ZERO LocalStorage Caching for Market Data (Strict "Fresh Data" Policy)
+
+> [!IMPORTANT]
+> **Data Integrity Rule**: Market Data (Price, OHLCV, Volume) MUST NEVER be cached in LocalStorage or persisted between sessions. All analysis must rely on 100% Fresh, Live Data fetched directly from the exchange on every page load. Stale data causes signal corruption.
 
 ## Core Features
 
@@ -51,7 +55,9 @@ An intelligent market assistant that provides context-aware summaries.
 -   **Privacy**: No user tracking, cookies, or account creation required.
 
 ### Data Flow
-1.  **Market Data**: Fetched via `useMarketData` hook (SWR) from Binance.
+1.  **Market Data**: Fetched via `useMarketData` hook (SWR) from Binance. **Strictly Non-Cached**.
+    -   *Constraint*: Any `fetchHistory` call must bypass local persistence.
+    -   *Reason*: Gap detection is unreliable on client-side; restarting fresh guarantees mathematical accuracy.
 2.  **Processing**: Raw candles are passed to `lib/engine/analyzer.ts`.
 3.  **State**: Processed results (Signals, Scores) are stored in React Context for global access.
 4.  **UI Updates**: Components react efficiently to data changes using targeted re-renders.
