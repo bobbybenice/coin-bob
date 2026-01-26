@@ -61,6 +61,49 @@ export default function AssetRow({
                 ))
             }
 
+            {/* Bias / Consensus Column */}
+            <td className="py-2.5 px-4 text-center border-l border-white/5 bg-black/20">
+                <div className="flex items-center justify-center gap-1">
+                    {['5m', '15m', '30m', '1h', '4h', '1d'].map((tf) => {
+                        // Calculate Consensus
+                        let bull = 0;
+                        let bear = 0;
+                        let neutral = 0;
+
+                        if (trend && trend.strategies) {
+                            Object.values(trend.strategies).forEach(stratMap => {
+                                const sig = stratMap[tf];
+                                if (sig === 'LONG') bull++;
+                                else if (sig === 'SHORT') bear++;
+                                else neutral++;
+                            });
+                        }
+
+                        // Determine Winner
+                        // If more bullish than both bearish and neutral = bullish (green)
+                        // If more bearish than both bullish and neutral = bearish (red)
+                        // Note: User logic says "more than NEUTRAL" too.
+                        // Implication: If 3 Bull, 1 Bear, 4 Neutral -> Bull (3) is NOT > Neutral (4) -> So Gray?
+                        // "If more bullish than both bearish and neutral" -> Bull > Bear AND Bull > Neutral.
+
+                        let finalSignal = 'NEUTRAL';
+                        if (bull > bear && bull > neutral) finalSignal = 'BULLISH';
+                        else if (bear > bull && bear > neutral) finalSignal = 'BEARISH';
+
+                        return (
+                            <div
+                                key={tf}
+                                title={`BIAS (${tf}): ${finalSignal} (Bull:${bull} Bear:${bear} Neut:${neutral})`}
+                                className={`w-2.5 h-2.5 rounded-full ring-1 ring-black/50 transition-all ${finalSignal === 'BULLISH' ? 'bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.8)]' :
+                                        finalSignal === 'BEARISH' ? 'bg-rose-500 shadow-[0_0_6px_rgba(244,63,94,0.8)]' :
+                                            'bg-zinc-700 opacity-40'
+                                    }`}
+                            />
+                        );
+                    })}
+                </div>
+            </td>
+
             <td className="py-2.5 px-4 text-center">
                 <div className="flex items-center justify-center gap-2">
                     {/* Play Button - Navigate to Analyze */}

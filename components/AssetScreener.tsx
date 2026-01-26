@@ -237,6 +237,10 @@ export default function AssetScreener() {
                   </th>
                 ))}
 
+                <th className="py-3 px-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider text-center border-l border-white/5 bg-black/20">
+                  BIAS
+                </th>
+
                 <th className="py-3 px-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider text-center">
                   Analyze
                 </th>
