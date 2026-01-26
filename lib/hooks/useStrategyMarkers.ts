@@ -67,7 +67,8 @@ export function useStrategyMarkers(
         let sentiment: 'BULLISH' | 'BEARISH' | 'NEUTRAL' = 'NEUTRAL';
 
         // Only calculate sentiment if we have an active signal or relevant state
-        if (finalResult.status !== 'IDLE' && finalResult.status !== 'WAIT' && finalResult.status !== 'WATCH') {
+        // FIXED: Include WATCH status (for ICT/FVG) so the indicator dot turns green/red
+        if (finalResult.status !== 'IDLE' && finalResult.status !== 'WAIT') {
             const meta = finalResult.metadata;
             if (meta) {
                 if (meta.side === 'LONG' || meta.sweep === 'BULLISH' || meta.fvg === 'BULLISH') {
