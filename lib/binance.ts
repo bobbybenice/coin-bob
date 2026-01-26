@@ -122,7 +122,7 @@ async function fetchHistoryBatch(symbols: string[], timeframe: Timeframe, isFutu
             for (let i = 0; i < symbolsToFetch.length; i += CHUCK_SIZE) {
                 const chunk = symbolsToFetch.slice(i, i + CHUCK_SIZE);
                 await Promise.all(chunk.map(async (sym) => {
-                    const klines = await fetchFuturesKlines(sym, timeframe, 100); // 100 limit enough for indicators
+                    const klines = await fetchFuturesKlines(sym, timeframe, 500); // 500 limit for EMA 200 checks
                     if (klines.length > 0) {
                         batchResults[sym] = klines;
                     }
