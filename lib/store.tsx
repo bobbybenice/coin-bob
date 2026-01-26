@@ -37,6 +37,7 @@ interface UserContextType {
     setActiveAsset: (symbol: string | null) => void;
     setTimeframe: (timeframe: Timeframe) => void;
     toggleVisibleStrategy: (strategy: StrategyName) => void;
+    toggleAllStrategies: (enable: boolean, strategies: StrategyName[]) => void;
 
     // Futures Logic
     isFuturesMode: boolean;
@@ -109,6 +110,13 @@ export function UserProvider({ children }: { children: ReactNode }) {
         });
     };
 
+    const toggleAllStrategies = (enable: boolean, strategies: StrategyName[]) => {
+        setSettings((prev) => ({
+            ...prev,
+            visibleStrategies: enable ? strategies : []
+        }));
+    };
+
     const [isFuturesMode, setIsFuturesMode] = useState(true);
 
     const toggleFuturesMode = () => {
@@ -142,6 +150,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
             setActiveAsset,
             setTimeframe,
             toggleVisibleStrategy,
+            toggleAllStrategies,
             isFuturesMode,
             toggleFuturesMode,
             isBacktestMode,

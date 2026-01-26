@@ -17,7 +17,7 @@ interface AnalysisEngineProps {
 }
 
 export default function AnalysisEngine({ isOpen = true, onToggle }: AnalysisEngineProps) {
-    const { settings, isLoaded, toggleVisibleStrategy } = useUserStore();
+    const { settings, isLoaded, toggleVisibleStrategy, toggleAllStrategies } = useUserStore();
     const { data: fngData } = useFearAndGreed();
 
     // Accordion State
@@ -84,6 +84,19 @@ export default function AnalysisEngine({ isOpen = true, onToggle }: AnalysisEngi
 
                     {/* Strategies (Screener Columns) */}
                     <FilterSection id="strategies" title="Strategies" icon={Layers} colorClass="text-zinc-400" isOpen={openSections.strategies} onToggle={toggleSection}>
+                        <div className="flex justify-between items-center px-2 pb-2 mb-2 border-b border-border/50">
+                            <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold">Visibility</span>
+                            <button
+                                onClick={() => {
+                                    const allNames = getAllStrategyNames();
+                                    const allSelected = allNames.every(n => settings.visibleStrategies?.includes(n));
+                                    toggleAllStrategies(!allSelected, allNames);
+                                }}
+                                className="text-[10px] bg-secondary/50 hover:bg-secondary text-foreground px-2 py-0.5 rounded transition-colors"
+                            >
+                                {getAllStrategyNames().every(n => settings.visibleStrategies?.includes(n)) ? 'Deselect All' : 'Select All'}
+                            </button>
+                        </div>
                         {getAllStrategyNames().map((name) => (
                             <div key={name} className="flex items-center justify-between py-1 px-2 rounded hover:bg-muted/50 transition-all cursor-pointer group" onClick={() => toggleVisibleStrategy(name)}>
                                 <span className="text-foreground font-medium text-xs">{STRATEGIES[name].displayName}</span>
