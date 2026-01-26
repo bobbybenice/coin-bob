@@ -1,5 +1,9 @@
-import { RSI, BollingerBands, EMA, ATR, ADX } from 'technicalindicators';
 import { Candle, StrategyResponse } from '../../types';
+import { calculateEMA } from '../indicators/ema';
+import { calculateBollingerBands } from '../indicators/bollinger';
+import { calculateRSI } from '../indicators/rsi';
+import { calculateATR } from '../indicators/atr';
+import { calculateADX } from '../indicators/adx';
 
 export interface GoldenStrategyOptions {
     trendEmaPeriod?: number; // Slow EMA (200)
@@ -39,37 +43,39 @@ export function strategyGolden(candles: Candle[], options: GoldenStrategyOptions
         };
     }
 
-    const closes = candles.map(c => c.close);
-    const high = candles.map(c => c.high);
-    const low = candles.map(c => c.low);
-    // Volume not currently used in V2
-    // const volume = candles.map(c => c.volume);
-
     // 1. Trend Filter (The King)
-    const emaValues = EMA.calculate({ period: trendEmaPeriod, values: closes });
-    const fastEmaValues = EMA.calculate({ period: fastEmaPeriod, values: closes });
-    const currentEma = emaValues[emaValues.length - 1]; // Slow (200)
-    const currentFastEma = fastEmaValues[fastEmaValues.length - 1]; // Fast (50)
+    const ema = calculateEMA(candles, trendEmaPeriod);
+    const fastEma = calculateEMA(candles, fastEmaPeriod);
+    const currentEma = ema.value; // Slow (200)
+    const currentFastEma = fastEma.value; // Fast (50)
 
     // 2. Volatility & Momentum (The Setup)
-    const bbValues = BollingerBands.calculate({ period: bbPeriod, stdDev: bbStdDev, values: closes });
-    const rsiValues = RSI.calculate({ period: rsiPeriod, values: closes });
-    const atrValues = ATR.calculate({ high, low, close: closes, period: atrPeriod });
-    const adxValues = ADX.calculate({ high, low, close: closes, period: adxPeriod });
+    const bb = calculateBollingerBands(candles, bbPeriod, bbStdDev);
+    const rsi = calculateRSI(candles, rsiPeriod);
+    const atr = calculateATR(candles, atrPeriod);
+    const adx = calculateADX(candles, adxPeriod);
 
-    const currentBB = bbValues[bbValues.length - 1];
-    const prevBB = bbValues[bbValues.length - 2];
-
-    const currentRSI = rsiValues[rsiValues.length - 1];
-    const currentATR = atrValues[atrValues.length - 1];
-    const currentADX = adxValues[adxValues.length - 1];
-
-    if (!currentEma || !currentFastEma || !currentBB || !prevBB || !currentRSI || !currentATR || !currentADX) {
+    if (!currentEma || !currentFastEma || !bb.value || !rsi.value || !atr.value || !adx.value) {
         return { status: 'IDLE', priceLevels: {}, reason: 'Calculating Indicators' };
     }
 
+    const { upper, lower } = bb.value; // Middle unused here
+    const currentRSI = rsi.value;
+    const currentATR = atr.value;
+    const currentADX = adx.value.adx;
+
     const current = candles[candles.length - 1];
     const prev = candles[candles.length - 2];
+
+    const prevBB = calculateBollingerBands(candles.slice(0, -1), bbPeriod, bbStdDev); // Recalculate for prev? Or optimize?
+    // Optimization: The manual BB calc returns just the latest. 
+    // To check "Previous Candle was outside", we ideally need history.
+    // For now, let's re-run for prev window to be safe and accurate without full array return.
+
+    // Actually, `prevBB` needs `lower` and `upper` from T-1.
+    if (!prevBB.value) return { status: 'IDLE', priceLevels: {}, reason: 'Calculating Indicators' };
+
+
     let status: StrategyResponse['status'] = 'IDLE';
     let reason = '';
     const entryPrice = current.close;
@@ -82,14 +88,16 @@ export function strategyGolden(candles: Candle[], options: GoldenStrategyOptions
     // 3. Price dipped to Lower Band (Pullback)
     // 4. Price rejected low and closed back INSIDE the band (Trigger)
     const isUptrend = current.close > currentEma && currentFastEma > currentEma;
-    const isTrendStrong = currentADX.adx >= minAdx;
-    const wasBelowLowerBand = prev.low <= prevBB.lower;
-    const isBackInside = current.close > currentBB.lower;
+    const isTrendStrong = currentADX >= minAdx;
+
+    // Check previous candle against PREVIOUS bands
+    const wasBelowLowerBand = prev.low <= prevBB.value.lower;
+    const isBackInside = current.close > lower;
     const isRsiGood = currentRSI < rsiOversold; // Using configurable threshold (default 40)
 
     if (isUptrend && isTrendStrong && wasBelowLowerBand && isBackInside && isRsiGood) {
         status = 'ENTRY';
-        reason = `Golden Long: Trend Pullback (Align: UP, ADX: ${currentADX.adx.toFixed(1)}, Bounce off Lower BB)`;
+        reason = `Golden Long: Trend Pullback (Align: UP, ADX: ${currentADX.toFixed(1)}, Bounce off Lower BB)`;
 
         // SL = 2x ATR below entry
         stopLoss = entryPrice - (2 * currentATR);
@@ -105,13 +113,13 @@ export function strategyGolden(candles: Candle[], options: GoldenStrategyOptions
     // 4. Price rejected high and closed back INSIDE the band (Trigger)
     const isDowntrend = current.close < currentEma && currentFastEma < currentEma;
     // Reuse isTrendStrong (ADX measures strength, not direction)
-    const wasAboveUpperBand = prev.high >= prevBB.upper;
-    const isBackInsideDown = current.close < currentBB.upper;
+    const wasAboveUpperBand = prev.high >= prevBB.value.upper;
+    const isBackInsideDown = current.close < upper;
     const isRsiGoodShort = currentRSI > rsiOverbought; // Using configurable threshold (default 60)
 
     if (isDowntrend && isTrendStrong && wasAboveUpperBand && isBackInsideDown && isRsiGoodShort) {
         status = 'ENTRY';
-        reason = `Golden Short: Trend Pullback (Align: DOWN, ADX: ${currentADX.adx.toFixed(1)}, Rejection at Upper BB)`;
+        reason = `Golden Short: Trend Pullback (Align: DOWN, ADX: ${currentADX.toFixed(1)}, Rejection at Upper BB)`;
 
         // SL = 2x ATR above entry
         stopLoss = entryPrice + (2 * currentATR);

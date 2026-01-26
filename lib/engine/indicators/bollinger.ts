@@ -1,4 +1,3 @@
-import { BollingerBands } from 'technicalindicators';
 import { Candle, IndicatorResult } from '../../types';
 
 interface BBResult {
@@ -14,30 +13,40 @@ export function calculateBollingerBands(candles: Candle[], period: number = 20, 
     }
 
     const closes = candles.map(c => c.close);
-    const bbValues = BollingerBands.calculate({
-        period,
-        stdDev,
-        values: closes
-    });
 
-    const currentBB = bbValues[bbValues.length - 1];
+    // We only strictly *need* the last value, but for completeness (and charts later) 
+    // we could calc broad range. Here we optimize for just the current signal.
 
-    if (!currentBB) {
-        return { value: { middle: 0, upper: 0, lower: 0, pb: 0 }, signal: 'neutral' };
-    }
+    // 1. Calculate SMA (Middle Band) for the last window
+    const window = closes.slice(-period);
+    const sum = window.reduce((a, b) => a + b, 0);
+    const middle = sum / period;
+
+    // 2. Calculate Standard Deviation
+    const squaredDiffs = window.map(price => Math.pow(price - middle, 2));
+    const avgSquaredDiff = squaredDiffs.reduce((a, b) => a + b, 0) / period;
+    const sd = Math.sqrt(avgSquaredDiff);
+
+    // 3. Bands
+    const upper = middle + (sd * stdDev);
+    const lower = middle - (sd * stdDev);
 
     const currentPrice = closes[closes.length - 1];
 
+    // %B Calculation
+    // (Price - Lower) / (Upper - Lower)
+    const pb = (currentPrice - lower) / (upper - lower);
+
     let signal: 'buy' | 'sell' | 'neutral' = 'neutral';
-    if (currentPrice < currentBB.lower) signal = 'buy'; // Over sold / mean reversion
-    if (currentPrice > currentBB.upper) signal = 'sell'; // Over bought
+    if (currentPrice < lower) signal = 'buy'; // Over sold / mean reversion
+    if (currentPrice > upper) signal = 'sell'; // Over bought
 
     return {
         value: {
-            middle: currentBB.middle,
-            upper: currentBB.upper,
-            lower: currentBB.lower,
-            pb: currentBB.pb
+            middle,
+            upper,
+            lower,
+            pb
         },
         signal,
         metadata: { period, stdDev }
