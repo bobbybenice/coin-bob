@@ -33,7 +33,9 @@ export default function CommandPalette({ assets, isOpen, onClose, currentQuery, 
     useEffect(() => {
         if (isOpen && searchInputRef.current) {
             searchInputRef.current.focus();
-            searchInputRef.current.select(); // Select all text so typing replaces it
+            // Ensure cursor is at the end
+            const len = searchInputRef.current.value.length;
+            searchInputRef.current.setSelectionRange(len, len);
         }
     }, [isOpen]);
 

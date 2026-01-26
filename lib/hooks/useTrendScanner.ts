@@ -171,7 +171,8 @@ export function useTrendScanner(assets: Asset[]) {
                         const result = executeStrategy(strategyName, candles);
 
                         // Extract SIGNAL
-                        if (result.status === 'ENTRY') {
+                        // FIXED: Accept both ENTRY and WATCH statuses. ICT Strategy returns 'WATCH' for FVGs.
+                        if (result.status === 'ENTRY' || result.status === 'WATCH') {
                             const side = result.metadata?.side; // 'LONG' | 'SHORT'
                             if (side === 'LONG' || side === 'SHORT') {
                                 strategyResults[strategyName][tf] = side;

@@ -49,6 +49,7 @@ export default function AssetScreener() {
         !e.altKey &&
         !['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement).tagName)
       ) {
+        e.preventDefault(); // Prevent browser from typing the char again (duplicates)
         setSearchQuery(e.key); // Capture first char and reset previous query
         setIsSearchOpen(true);
       }
