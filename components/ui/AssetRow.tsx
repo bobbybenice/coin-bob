@@ -45,6 +45,16 @@ export default function AssetRow({
                         <div className="flex items-center justify-center gap-1">
                             {['5m', '15m', '30m', '1h', '4h', '1d'].map((tf) => {
                                 const signal = trend?.strategies?.[strategy]?.[tf];
+                                if (!signal) {
+                                    // Loading State
+                                    return (
+                                        <div
+                                            key={tf}
+                                            title="Analyzing..."
+                                            className="w-2 h-2 rounded-full bg-zinc-800 animate-pulse border border-white/5"
+                                        />
+                                    );
+                                }
                                 return (
                                     <div
                                         key={tf}
@@ -69,14 +79,26 @@ export default function AssetRow({
                         let bull = 0;
                         let bear = 0;
                         let neutral = 0;
+                        let hasData = false;
 
                         if (trend && trend.strategies) {
+                            hasData = true;
                             Object.values(trend.strategies).forEach(stratMap => {
                                 const sig = stratMap[tf];
                                 if (sig === 'LONG') bull++;
                                 else if (sig === 'SHORT') bear++;
                                 else neutral++;
                             });
+                        }
+
+                        if (!hasData) {
+                            return (
+                                <div
+                                    key={tf}
+                                    title="Calculating Bias..."
+                                    className="w-2.5 h-2.5 rounded-full ring-1 ring-black/50 bg-zinc-700/50 animate-pulse"
+                                />
+                            );
                         }
 
                         // Determine Winner
@@ -95,8 +117,8 @@ export default function AssetRow({
                                 key={tf}
                                 title={`BIAS (${tf}): ${finalSignal} (Bull:${bull} Bear:${bear} Neut:${neutral})`}
                                 className={`w-2.5 h-2.5 rounded-full ring-1 ring-black/50 transition-all ${finalSignal === 'BULLISH' ? 'bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.8)]' :
-                                        finalSignal === 'BEARISH' ? 'bg-rose-500 shadow-[0_0_6px_rgba(244,63,94,0.8)]' :
-                                            'bg-zinc-700 opacity-40'
+                                    finalSignal === 'BEARISH' ? 'bg-rose-500 shadow-[0_0_6px_rgba(244,63,94,0.8)]' :
+                                        'bg-zinc-700 opacity-40'
                                     }`}
                             />
                         );
