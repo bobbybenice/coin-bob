@@ -62,15 +62,7 @@ function pruneCache() {
     }
 }
 
-interface BinanceTicker {
-    s: string;
-    c: string;
-    o: string;
-    h: string;
-    l: string;
-    P: string;
-    v: string;
-}
+
 
 const assetHistory: Record<string, Candle[]> = {};
 const latestAssets: Asset[] = [];
@@ -229,227 +221,234 @@ export function subscribeToBinanceStream(timeframe: Timeframe, isFuturesMode: bo
     if (activeTimeframe !== timeframe || activeFuturesMode !== isFuturesMode) {
         activeTimeframe = timeframe;
         activeFuturesMode = isFuturesMode;
-        // Fetch history for Spot or Futures
+        // Fetch history for Spot or Futures to prime the pump
         fetchHistoryBatch(WATCHLIST, timeframe, isFuturesMode);
     }
 
-    if (!isFuturesMode) {
-        // SPOT MODE: Use WebSocket
-        const ws = new WebSocket('wss://stream.binance.com:9443/ws/!ticker@arr');
-        let hasUpdates = false;
+    let ws: WebSocket | null = null;
+    let isRunning = true;
+    let hasUpdates = false;
+
+    // K-Line stream URL construction
+    // Format: <symbol>@kline_<interval>
+    // Max streams per connection is 1024 (we have ~50)
+    const streams = WATCHLIST.map(s => `${s.toLowerCase()}@kline_${timeframe}`).join('/');
+    const baseURL = isFuturesMode ? 'wss://fstream.binance.com' : 'wss://stream.binance.com:9443';
+    const wsUrl = `${baseURL}/stream?streams=${streams}`;
+
+    const connect = () => {
+        if (!isRunning) return;
+
+        ws = new WebSocket(wsUrl);
+
+        ws.onopen = () => {
+            // console.log(`Connected to ${isFuturesMode ? 'Futures' : 'Spot'} K-Line Stream (${timeframe})`);
+        };
 
         ws.onmessage = (event) => {
             try {
-                const tickers: BinanceTicker[] = JSON.parse(event.data);
+                const payload = JSON.parse(event.data);
+                // Payload structure: { stream: 'btcusdt@kline_15m', data: { e: 'kline', s: 'BTCUSDT', k: { ... } } }
+                const { s: symbol, k: candleData } = payload.data;
 
-                tickers.forEach(t => {
-                    if (WATCHLIST.includes(t.s)) {
-                        const price = parseFloat(t.c);
-                        const open = parseFloat(t.o);
-                        const high = parseFloat(t.h);
-                        const low = parseFloat(t.l);
-                        const volume = parseFloat(t.v);
+                if (!symbol || !candleData) return;
 
-                        const info = SYMBOL_MAP[t.s];
+                // Extract Candle Data (K-Line)
+                // k: { t: start, T: end, s: symbol, i: interval, f: firstId, L: lastId, o: open, c: close, h: high, l: low, v: volume, ... }
+                const currentCandle: Candle = {
+                    time: candleData.t,
+                    open: parseFloat(candleData.o),
+                    high: parseFloat(candleData.h),
+                    low: parseFloat(candleData.l),
+                    close: parseFloat(candleData.c),
+                    volume: parseFloat(candleData.v)
+                };
 
-                        if (!assetHistory[t.s]) assetHistory[t.s] = [];
+                // Update History
+                // Note: Futures symbol might need normalization if 1000PEPE vs PEPE, but WATCHLIST should align.
+                // Our WATCHLIST usually is standardized (e.g. BTCUSDT).
+                // API returns strictly matching symbol.
+                if (!assetHistory[symbol]) assetHistory[symbol] = [];
+                const history = assetHistory[symbol];
 
-                        const history = assetHistory[t.s];
-
-                        // Current candle (Snapshot of today)
-                        const currentCandle: Candle = {
-                            time: Date.now(), // Approximate for the live candle
-                            open,
-                            high,
-                            low,
-                            close: price,
-                            volume
-                        };
-
-                        if (history.length > 0) {
-                            history[history.length - 1] = currentCandle;
-                        } else {
-                            history.push(currentCandle);
-                        }
-
-                        // Indicators & Strategies via Engine
-                        const change24h = parseFloat(t.P);
-                        const analysis = analyzeAsset(history);
-                        // DEBUG: Check breakdown
-
-                        // Bob Score Integration - REMOVED
-
-                        const ictResult = analysis.strategies['ICT'];
-                        const ictMetadata = ictResult?.metadata as {
-                            sweep?: string;
-                            fvg?: string;
-                            killzone?: 'LONDON' | 'NEW_YORK';
-                            isHighProbability?: boolean;
-                        } | undefined;
-
-                        let oldSignal: 'NONE' | 'BULLISH_SWEEP' | 'BEARISH_SWEEP' | 'BULLISH_FVG' | 'BEARISH_FVG' = 'NONE';
-                        if (ictMetadata?.sweep === 'BULLISH') oldSignal = 'BULLISH_SWEEP';
-                        else if (ictMetadata?.sweep === 'BEARISH') oldSignal = 'BEARISH_SWEEP';
-                        else if (ictMetadata?.fvg === 'BULLISH') oldSignal = 'BULLISH_FVG';
-                        else if (ictMetadata?.fvg === 'BEARISH') oldSignal = 'BEARISH_FVG';
-
-                        const ictAnalysis = {
-                            signal: oldSignal,
-                            fvg: ictMetadata?.fvg ? { type: ictMetadata.fvg as 'BULLISH' | 'BEARISH' } : undefined,
-                            killzone: ictMetadata?.killzone,
-                            isHighProbability: ictMetadata?.isHighProbability || false
-                        };
-
-                        const existingIndex = latestAssets.findIndex(a => a.symbol === t.s.replace('USDT', ''));
-
-                        const newAsset: Asset = {
-                            id: info.id,
-                            symbol: t.s.replace('USDT', ''),
-                            name: info.name,
-                            price: price,
-                            change24h: change24h,
-                            volume24h: parseFloat(t.v),
-                            marketCap: 0,
-                            rsi: analysis.indicators.rsi.value,
-                            ema20: analysis.indicators.ema20.value,
-                            ema50: analysis.indicators.ema50.value,
-                            ema200: analysis.indicators.ema200.value,
-                            macd: analysis.indicators.macd.value,
-                            bb: analysis.indicators.bb.value,
-                            ictAnalysis: ictAnalysis,
-                            trigger: analysis.trigger
-                        };
-
-                        if (existingIndex >= 0) {
-                            latestAssets[existingIndex] = newAsset;
-                        } else {
-                            latestAssets.push(newAsset);
-                        }
-
-                        hasUpdates = true;
+                if (history.length > 0) {
+                    const lastHistory = history[history.length - 1];
+                    if (lastHistory.time === currentCandle.time) {
+                        // Update current candle
+                        history[history.length - 1] = currentCandle;
+                    } else if (currentCandle.time > lastHistory.time) {
+                        // Close candle, push new
+                        history.push(currentCandle);
+                        // Limit history size to prevent memory leak
+                        if (history.length > 500) history.shift();
                     }
-                });
+                } else {
+                    history.push(currentCandle);
+                }
+
+                // Analyze Asset
+                // Optimization: We could debounce this analysis if CPU spikes, but for 50 assets it is fine.
+                const analysis = analyzeAsset(history);
+                const info = SYMBOL_MAP[symbol] || { id: symbol.toLowerCase(), name: symbol };
+
+                // ICT Integration
+                const ictResult = analysis.strategies['ICT'];
+                const ictMetadata = ictResult?.metadata as {
+                    sweep?: string;
+                    fvg?: string;
+                    killzone?: 'LONDON' | 'NEW_YORK';
+                    isHighProbability?: boolean;
+                } | undefined;
+
+                let oldSignal: 'NONE' | 'BULLISH_SWEEP' | 'BEARISH_SWEEP' | 'BULLISH_FVG' | 'BEARISH_FVG' = 'NONE';
+                if (ictMetadata?.sweep === 'BULLISH') oldSignal = 'BULLISH_SWEEP';
+                else if (ictMetadata?.sweep === 'BEARISH') oldSignal = 'BEARISH_SWEEP';
+                else if (ictMetadata?.fvg === 'BULLISH') oldSignal = 'BULLISH_FVG';
+                else if (ictMetadata?.fvg === 'BEARISH') oldSignal = 'BEARISH_FVG';
+
+                const ictAnalysis = {
+                    signal: oldSignal,
+                    fvg: ictMetadata?.fvg ? { type: ictMetadata.fvg as 'BULLISH' | 'BEARISH' } : undefined,
+                    killzone: ictMetadata?.killzone,
+                    isHighProbability: ictMetadata?.isHighProbability || false
+                };
+
+                // Construct Asset Object
+                const cleanSymbol = symbol.replace('USDT', '');
+
+                // For Change %, we don't get 24h change in K-Line stream unfortunately.
+                // We only get current candle change.
+                // Option:
+                // 1. Fetch 24h ticker separately for just Change %.
+                // 2. Calculate Change % for THIS candle (Open vs Close).
+                // User expects 24h change usually? Or bar change?
+                // Screener usually shows 24h Change.
+                // COMPROMISE: We will keep the "Price" accurate. "Change" might be stale if we don't fetch tickers.
+                // SOLUTION: We can calculate Change vs Open of the DAY if we have daily candle?
+                // Or simply calculate Candle Change % (since user is looking at this timeframe).
+                // Let's use Candle Change % for now as it aligns with the chart timeframe being watched.
+                // OR: 0 if missing.
+
+                // Let's stick to Candle Change for consistency with the view, or 0.
+                const candleChange = ((currentCandle.close - currentCandle.open) / currentCandle.open) * 100;
+
+                const existingIndex = latestAssets.findIndex(a => a.symbol === cleanSymbol);
+
+                // Preserve previous 24h volume/change if available, or use basics
+                const prevAsset = existingIndex >= 0 ? latestAssets[existingIndex] : null;
+
+                const newAsset: Asset = {
+                    id: info.id,
+                    symbol: cleanSymbol,
+                    name: info.name,
+                    price: currentCandle.close,
+                    change24h: prevAsset ? prevAsset.change24h : candleChange, // Keep stale 24h change or fallback
+                    volume24h: prevAsset ? prevAsset.volume24h : currentCandle.volume, // 24h vol vs bar vol difference
+                    marketCap: 0,
+                    rsi: analysis.indicators.rsi.value,
+                    ema20: analysis.indicators.ema20.value,
+                    ema50: analysis.indicators.ema50.value,
+                    ema200: analysis.indicators.ema200.value,
+                    macd: analysis.indicators.macd.value,
+                    bb: analysis.indicators.bb.value,
+                    ictAnalysis: ictAnalysis,
+                    trigger: analysis.trigger,
+                    isPerpetual: isFuturesMode,
+                    fundingRate: prevAsset?.fundingRate || 0, // Keep stale or fetch separately
+                    openInterest: 0,
+                    nextFundingTime: prevAsset?.nextFundingTime
+                };
+
+                if (existingIndex >= 0) {
+                    latestAssets[existingIndex] = newAsset;
+                } else {
+                    latestAssets.push(newAsset);
+                }
+
+                hasUpdates = true;
+
             } catch (e) {
                 console.error("Binance WS Parse Error", e);
             }
         };
 
-        const interval = setInterval(() => {
-            if (hasUpdates) {
-                callback([...latestAssets]);
-                hasUpdates = false;
+        ws.onerror = (e) => {
+            console.error("Binance WS Error", e);
+            ws?.close();
+        };
+
+        ws.onclose = () => {
+            if (isRunning) {
+                // console.log("Reconnecting stream in 1s...");
+                setTimeout(connect, 1000);
             }
-        }, 500);
-
-        return () => {
-            clearInterval(interval);
-            ws.onmessage = null;
-            ws.onerror = null;
-            ws.close();
         };
+    };
 
-    } else {
-        // PERPS MODE: Polling
-        let isRunning = true;
+    // Initialize Connection (Spot & Futures use same K-Line logic now!)
+    connect();
 
-        const fetchFuturesData = async () => {
-            if (!isRunning) return;
+    // Side-loop: We still might want 24h stats/funding rates for the UI columns (Change%, Vol, Funding)
+    // We can poll this less frequently (e.g. every 5s) just to keep metadata fresh.
+    let metaInterval: NodeJS.Timeout;
+    const fetchMetadata = async () => {
+        if (!isRunning) return;
+        try {
+            if (isFuturesMode) {
+                const [tickers, fundingRates] = await Promise.all([
+                    fetchFuturesDailyStats(),
+                    fetchFundingRates()
+                ]);
+                // Update latestAssets with 24h stats only (preserve price/indicators from WS)
+                tickers.forEach(t => {
+                    const norm = t.symbol.replace(/^1000/, '').replace('USDT', '');
+                    const asset = latestAssets.find(a => a.symbol === norm);
+                    if (asset) {
+                        asset.change24h = parseFloat(t.priceChangePercent);
+                        asset.volume24h = parseFloat(t.quoteVolume);
+                    }
+                });
+                // Update Funding
+                const fundingMap = new Map<string, { rate: string, nextTime: number }>();
+                fundingRates.forEach(f => fundingMap.set(f.symbol, { rate: f.lastFundingRate, nextTime: f.nextFundingTime }));
+                latestAssets.forEach(a => {
+                    // Try both raw and 1000 pre
+                    const f = fundingMap.get(a.symbol + 'USDT') || fundingMap.get('1000' + a.symbol + 'USDT');
+                    if (f) {
+                        a.fundingRate = parseFloat(f.rate) * 100;
+                        a.nextFundingTime = f.nextTime;
+                    }
+                });
 
-            const [tickers, fundingRates] = await Promise.all([
-                fetchFuturesDailyStats(),
-                fetchFundingRates()
-            ]);
-
-            // Map funding rates for O(1) lookup
-            const fundingMap = new Map<string, { rate: string, nextTime: number }>();
-            fundingRates.forEach(f => {
-                fundingMap.set(f.symbol, { rate: f.lastFundingRate, nextTime: f.nextFundingTime });
-            });
-
-            // Process Tickers
-            const newAssets: Asset[] = [];
-
-            for (const t of tickers) {
-                // Normalize symbol: Remove '1000' prefix for meme coins to match Watchlist
-                // e.g. '1000BONKUSDT' -> 'BONKUSDT'
-                const normalizedSymbol = t.symbol.replace(/^1000/, '');
-
-                if (WATCHLIST.includes(normalizedSymbol)) {
-                    const cleanSymbol = normalizedSymbol.replace('USDT', '');
-                    const info = SYMBOL_MAP[normalizedSymbol] || { id: cleanSymbol.toLowerCase(), name: cleanSymbol };
-
-                    const price = parseFloat(t.lastPrice);
-                    const funding = fundingMap.get(t.symbol); // Use original t.symbol for map lookup
-                    const fRate = funding ? parseFloat(funding.rate) * 100 : 0; // Convert to %
-
-                    // Get History for Indicators (Futures History)
-                    // We store history key as the NORMALIZED symbol (e.g. BONKUSDT) or clean (BONK)
-                    // fetchFuturesKlines handles the mapping internally now.
-                    // Check cleanSymbol first
-                    if (!assetHistory[normalizedSymbol]) assetHistory[normalizedSymbol] = [];
-                    const history = assetHistory[normalizedSymbol];
-
-                    // Indicators & Strategies via Engine
-                    const analysis = analyzeAsset(history);
-
-                    // Bob Score Integration - REMOVED
-
-                    const ictMetadata = analysis.strategies['ICT']?.metadata as {
-                        sweep?: string;
-                        fvg?: string;
-                        killzone?: 'LONDON' | 'NEW_YORK';
-                        isHighProbability?: boolean;
-                    };
-
-                    let oldSignal: 'NONE' | 'BULLISH_SWEEP' | 'BEARISH_SWEEP' | 'BULLISH_FVG' | 'BEARISH_FVG' = 'NONE';
-                    if (ictMetadata?.sweep === 'BULLISH') oldSignal = 'BULLISH_SWEEP';
-                    else if (ictMetadata?.sweep === 'BEARISH') oldSignal = 'BEARISH_SWEEP';
-                    else if (ictMetadata?.fvg === 'BULLISH') oldSignal = 'BULLISH_FVG';
-                    else if (ictMetadata?.fvg === 'BEARISH') oldSignal = 'BEARISH_FVG';
-
-                    const ictAnalysis = {
-                        signal: oldSignal,
-                        fvg: ictMetadata?.fvg ? { type: ictMetadata.fvg as 'BULLISH' | 'BEARISH' } : undefined,
-                        killzone: ictMetadata?.killzone,
-                        isHighProbability: ictMetadata?.isHighProbability || false
-                    };
-
-                    newAssets.push({
-                        id: info.id,
-                        symbol: cleanSymbol,
-                        name: info.name,
-                        price: price,
-                        change24h: parseFloat(t.priceChangePercent),
-                        volume24h: parseFloat(t.quoteVolume),
-                        marketCap: 0,
-                        rsi: analysis.indicators.rsi.value,
-                        ema20: analysis.indicators.ema20.value,
-                        ema50: analysis.indicators.ema50.value,
-                        ema200: analysis.indicators.ema200.value,
-                        macd: analysis.indicators.macd.value,
-                        bb: analysis.indicators.bb.value,
-                        ictAnalysis: ictAnalysis,
-                        trigger: analysis.trigger,
-                        isPerpetual: true,
-                        fundingRate: fRate,
-                        openInterest: 0,
-                        nextFundingTime: funding?.nextTime
-                    });
-                }
+            } else {
+                // Spot Metadata? Not critical for now, relying on initial fetchHistoryBatch could populate it if we parsed it there?
+                // Currently fetchHistoryBatch only gets Candles.
+                // We could fetch ticker array once.
+                // For now, let's leave Spot metadata as fallback.
             }
+            hasUpdates = true; // Force re-render with new metadata
+        } catch (e) { console.warn("Meta fetch failed", e); }
+    };
 
-            // Order by Volume desc for now
-            newAssets.sort((a, b) => b.volume24h - a.volume24h);
-
-            callback(newAssets);
-        };
-
-        fetchFuturesData();
-        const interval = setInterval(fetchFuturesData, 2000);
-
-        return () => {
-            isRunning = false;
-            clearInterval(interval);
-        };
+    // Fetch metadata every 10s (less frequent)
+    if (isFuturesMode) {
+        fetchMetadata();
+        metaInterval = setInterval(fetchMetadata, 10000);
     }
+
+    const interval = setInterval(() => {
+        if (hasUpdates) {
+            // Sort by something distinctive? Or user setting? Default volume desc.
+            latestAssets.sort((a, b) => (b.volume24h || 0) - (a.volume24h || 0));
+            callback([...latestAssets]);
+            hasUpdates = false;
+        }
+    }, 500);
+
+    return () => {
+        isRunning = false;
+        clearInterval(interval);
+        if (metaInterval) clearInterval(metaInterval);
+        ws?.close();
+    };
 }

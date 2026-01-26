@@ -69,7 +69,7 @@ export function strategySupportResistance(candles: Candle[], options: SupportRes
 
     let status: StrategyResponse['status'] = 'IDLE';
     let reason = '';
-    let side: 'LONG' | 'SHORT' = 'LONG';
+    let side: 'LONG' | 'SHORT' | undefined;
     let stopLoss = 0;
     let takeProfit = 0;
 
