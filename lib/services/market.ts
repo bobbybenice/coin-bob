@@ -1,26 +1,17 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 'use server';
 import { Candle } from '@/lib/types';
-import { FUTURES_SYMBOL_MAP } from './futures';
+
 
 export async function fetchHistoricalData(symbol: string, interval: string = '1d', isFutures: boolean = false): Promise<Candle[]> {
     if (isFutures) {
-        // Direct Futures Fetch (Single Source for now)
-        const querySymbol = FUTURES_SYMBOL_MAP[symbol] || symbol;
-        const url = `https://fapi.binance.com/fapi/v1/klines?symbol=${querySymbol}&interval=${interval}&limit=500`;
+        // Use the shared robust futures fetcher (matches Client logic)
         try {
-            const res = await fetch(url, { headers: { 'User-Agent': 'CoinBob/1.0' }, cache: 'no-store' });
-            if (res.ok) {
-                const json = await res.json();
-                return Array.isArray(json) ? json.map((d: any[]) => ({
-                    time: d[0],
-                    open: parseFloat(d[1]),
-                    high: parseFloat(d[2]),
-                    low: parseFloat(d[3]),
-                    close: parseFloat(d[4]),
-                    volume: parseFloat(d[5])
-                })) : [];
-            }
+            // Dynamic import to avoid circular dep if futures imports market (it doesn't seem to, but safe)
+            // Check imports: market -> futures is fine.
+            const { fetchFuturesKlines } = await import('./futures');
+            const data = await fetchFuturesKlines(symbol, interval, 500);
+            return data;
         } catch (e) {
             console.error(`Futures fetch failed for ${symbol}`, e);
             return [];
