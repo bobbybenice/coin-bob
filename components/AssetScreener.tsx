@@ -10,9 +10,9 @@ import CommandPalette from './ui/CommandPalette';
 import AssetRow from './ui/AssetRow';
 import { Button } from './ui/Button';
 import { useRouter } from 'next/navigation';
-import { STRATEGIES } from '@/lib/engine/strategies';
+import { STRATEGIES, StrategyName } from '@/lib/engine/strategies';
 
-type SortField = 'price' | 'symbol';
+type SortField = 'price' | 'symbol' | StrategyName | 'bias';
 type SortDirection = 'asc' | 'desc';
 
 export default function AssetScreener() {
@@ -26,6 +26,71 @@ export default function AssetScreener() {
 
   const [sortField, setSortField] = useState<SortField>('symbol');
   const [sortDir, setSortDir] = useState<SortDirection>('asc');
+
+  // Helper: Count LONG/SHORT signals for a strategy
+  const getStrategyScore = (assetSymbol: string, strategy: StrategyName): number => {
+    const trend = trends[assetSymbol];
+    if (!trend?.strategies) return -1000; // Put assets without data at the end
+
+    const signals = trend.strategies[strategy];
+    if (!signals) return -1000;
+
+    let longCount = 0;
+    let shortCount = 0;
+
+    ['5m', '15m', '30m', '1h', '4h', '1d'].forEach((tf) => {
+      if (signals[tf] === 'LONG') longCount++;
+      if (signals[tf] === 'SHORT') shortCount++;
+    });
+
+    // Create a score that properly ranks assets
+    // For bullish (desc): prioritize LONG count, penalize SHORT count
+    // For bearish (asc): prioritize SHORT count, penalize LONG count
+    if (sortDir === 'desc') {
+      // Bullish: (LONG * 10) - SHORT
+      // Example: 3 LONG, 0 SHORT = 30, beats 1 LONG, 0 SHORT = 10
+      return (longCount * 10) - shortCount;
+    } else {
+      // Bearish: (SHORT * 10) - LONG
+      // Example: 3 SHORT, 0 LONG = 30, beats 1 SHORT, 0 LONG = 10
+      return (shortCount * 10) - longCount;
+    }
+  };
+
+  // Helper: Count bullish/bearish consensus in BIAS column
+  const getBiasScore = (assetSymbol: string): number => {
+    const trend = trends[assetSymbol];
+    if (!trend?.strategies) return -1000;
+
+    let bullishCount = 0;
+    let bearishCount = 0;
+
+    ['5m', '15m', '30m', '1h', '4h', '1d'].forEach((tf) => {
+      // Calculate consensus for this timeframe
+      let bull = 0;
+      let bear = 0;
+
+      if (trend.strategies) {
+        Object.values(trend.strategies).forEach((stratMap) => {
+          const sig = stratMap[tf];
+          if (sig === 'LONG') bull++;
+          else if (sig === 'SHORT') bear++;
+        });
+      }
+
+      if (bull > bear) bullishCount++;
+      else if (bear > bull) bearishCount++;
+    });
+
+    // Create a score that properly ranks assets
+    if (sortDir === 'desc') {
+      // Bullish: (bullish * 10) - bearish
+      return (bullishCount * 10) - bearishCount;
+    } else {
+      // Bearish: (bearish * 10) - bullish
+      return (bearishCount * 10) - bullishCount;
+    }
+  };
 
   // Command Palette State
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -105,18 +170,38 @@ export default function AssetScreener() {
 
       return true;
     }).sort((a, b) => {
-      const aValue = a[sortField];
-      const bValue = b[sortField];
-
-      if (typeof aValue === 'string' && typeof bValue === 'string') {
-        return sortDir === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
+      // Strategy column sorting
+      if (sortField !== 'price' && sortField !== 'symbol') {
+        if (sortField === 'bias') {
+          const aScore = getBiasScore(a.symbol);
+          const bScore = getBiasScore(b.symbol);
+          return bScore - aScore; // Higher score first
+        } else {
+          // Strategy sorting
+          const aScore = getStrategyScore(a.symbol, sortField as StrategyName);
+          const bScore = getStrategyScore(b.symbol, sortField as StrategyName);
+          return bScore - aScore; // Higher score first
+        }
       }
 
-      return sortDir === 'asc'
-        ? (aValue as number) - (bValue as number)
-        : (bValue as number) - (aValue as number);
+      // Default sorting for price/symbol
+      if (sortField === 'price' || sortField === 'symbol') {
+        const aValue = a[sortField];
+        const bValue = b[sortField];
+
+        if (typeof aValue === 'string' && typeof bValue === 'string') {
+          return sortDir === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
+        }
+
+        return sortDir === 'asc'
+          ? (aValue as number) - (bValue as number)
+          : (bValue as number) - (aValue as number);
+      }
+
+      return 0;
     });
-  }, [settings, sortField, sortDir, isLoaded, assets, searchQuery]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [settings, sortField, sortDir, isLoaded, assets, searchQuery, trends]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -129,7 +214,13 @@ export default function AssetScreener() {
 
   const SortIcon = ({ field }: { field: SortField }) => {
     if (sortField !== field) return <span className="text-zinc-600 ml-1">⇅</span>;
-    return <span className="text-emerald-500 ml-1">{sortDir === 'asc' ? '↑' : '↓'}</span>;
+
+    // For strategy columns: desc = bullish (green ↓), asc = bearish (red ↑)
+    const isDescending = sortDir === 'desc';
+    const color = isDescending ? 'text-emerald-500' : 'text-rose-500';
+    const arrow = isDescending ? '↓' : '↑';
+
+    return <span className={`${color} ml-1`}>{arrow}</span>;
   };
 
   if (!isLoaded) return <div className="h-full flex items-center justify-center text-muted-foreground">Initializing...</div>;
@@ -215,13 +306,20 @@ export default function AssetScreener() {
 
                 {/* Dynamic Strategy Columns */}
                 {settings.visibleStrategies?.map((strategy) => (
-                  <th key={strategy} className="py-3 px-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider text-center">
-                    {STRATEGIES[strategy]?.displayName || strategy}
+                  <th
+                    key={strategy}
+                    className="py-3 px-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider text-center cursor-pointer hover:text-zinc-300 transition-colors select-none"
+                    onClick={() => handleSort(strategy as SortField)}
+                  >
+                    {STRATEGIES[strategy]?.displayName || strategy} <SortIcon field={strategy as SortField} />
                   </th>
                 ))}
 
-                <th className="py-3 px-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider text-center border-l border-white/5 bg-black/20">
-                  BIAS
+                <th
+                  className="py-3 px-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider text-center border-l border-white/5 bg-black/20 cursor-pointer hover:text-zinc-300 transition-colors select-none"
+                  onClick={() => handleSort('bias')}
+                >
+                  BIAS <SortIcon field="bias" />
                 </th>
 
                 <th className="py-3 px-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider text-center">
