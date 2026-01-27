@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-'use server';
+
 import { Candle } from '@/lib/types';
 
 
