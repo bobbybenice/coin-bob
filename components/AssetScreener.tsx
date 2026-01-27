@@ -10,7 +10,8 @@ import CommandPalette from './ui/CommandPalette';
 import AssetRow from './ui/AssetRow';
 import { Button } from './ui/Button';
 import { useRouter } from 'next/navigation';
-import { STRATEGIES, StrategyName } from '@/lib/engine/strategies';
+import { STRATEGIES } from '@/lib/engine/strategies';
+import { StrategyName } from '@/lib/types';
 
 type SortField = 'price' | 'symbol' | StrategyName | 'bias';
 type SortDirection = 'asc' | 'desc';
