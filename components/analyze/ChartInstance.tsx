@@ -300,7 +300,7 @@ export function ChartInstance({
     const strategyNames = getAllStrategyNames();
 
     return (
-        <div className="flex flex-col h-full bg-card rounded-lg border border-border overflow-hidden">
+        <div className="flex flex-col h-full bg-card border-x border-border overflow-hidden">
             {/* Header with controls */}
             <div className="flex items-center justify-between p-3 border-b border-border bg-muted/30">
                 <div className="flex items-center gap-3">

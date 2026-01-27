@@ -6,9 +6,10 @@ import { createPortal } from 'react-dom';
 
 interface InfoTooltipProps {
     content: React.ReactNode;
+    position?: 'left' | 'right'; // Which side of button to position tooltip
 }
 
-export function InfoTooltip({ content }: InfoTooltipProps) {
+export function InfoTooltip({ content, position = 'left' }: InfoTooltipProps) {
     const [isOpen, setIsOpen] = useState(false);
     const [coords, setCoords] = useState({ top: 0, left: 0 });
     const buttonRef = useRef<HTMLButtonElement>(null);
@@ -18,13 +19,21 @@ export function InfoTooltip({ content }: InfoTooltipProps) {
     useEffect(() => {
         if (isOpen && buttonRef.current) {
             const rect = buttonRef.current.getBoundingClientRect();
-            // Default: Centered above the button
-            const top = rect.top - 10; // 10px spacing
-            const left = rect.left + rect.width / 2;
+
+            let top, left;
+            if (position === 'right') {
+                // Position to the right of the button, vertically centered
+                top = rect.top + rect.height / 2;
+                left = rect.right + 8; // 8px spacing to the right
+            } else {
+                // Default: above button, horizontally centered
+                top = rect.top - 10;
+                left = rect.left + rect.width / 2;
+            }
 
             setCoords({ top, left });
         }
-    }, [isOpen]);
+    }, [isOpen, position]);
 
     // Close on click outside or scroll/resize
     useEffect(() => {
@@ -80,7 +89,10 @@ export function InfoTooltip({ content }: InfoTooltipProps) {
                         top: coords.top,
                         left: coords.left,
                     }}
-                    className="fixed -translate-x-1/2 -translate-y-full w-64 p-3 bg-zinc-950/95 backdrop-blur-md border border-zinc-800 rounded-lg shadow-xl z-[9999] animate-in fade-in zoom-in-95 duration-200 pointer-events-auto"
+                    className={`fixed w-64 p-3 bg-zinc-950/95 backdrop-blur-md border border-zinc-800 rounded-lg shadow-xl z-[9999] animate-in fade-in zoom-in-95 duration-200 pointer-events-auto ${position === 'right'
+                            ? '-translate-y-1/2' // Vertically centered beside button
+                            : '-translate-x-1/2 -translate-y-full' // Centered above button
+                        }`}
                     onClick={(e) => e.stopPropagation()}
                 >
                     <div className="text-xs text-zinc-300 leading-relaxed font-medium">

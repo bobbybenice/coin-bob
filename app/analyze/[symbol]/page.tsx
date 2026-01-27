@@ -12,7 +12,9 @@ import { useUserStore } from '@/lib/store';
 import { Play, RotateCcw, Settings } from 'lucide-react';
 import { useState, useEffect, useMemo } from 'react';
 import { WATCHLIST, SYMBOL_MAP } from '@/lib/constants';
-import { Asset } from '@/lib/types';
+import { Asset, StrategyName } from '@/lib/types';
+import { getAllStrategyNames, getStrategy } from '@/lib/engine/strategies';
+import { InfoTooltip } from '@/components/ui/InfoTooltip';
 
 interface AnalyzePageProps {
     params: Promise<{
@@ -88,10 +90,8 @@ function BacktestControls() {
     const { isBacktestMode, toggleBacktestMode } = useUserStore();
 
     return (
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
             <BacktestSettings />
-
-            <div className="w-px h-4 bg-border" />
 
             {isBacktestMode ? (
                 <div className="flex items-center gap-4 animate-in fade-in slide-in-from-right-4 duration-300">
@@ -134,8 +134,51 @@ export default function AnalyzePage({ params }: AnalyzePageProps) {
         return () => setActiveAsset(null); // Clear on exit
     }, [symbol, setActiveAsset]);
 
-    const [isSidebarOpen, setIsSidebarOpen] = useState(true);
     const [isSwitcherOpen, setIsSwitcherOpen] = useState(false);
+    const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+
+    // Chart control state (lifted from MultiChartView)
+    const [chartCount, setChartCount] = useState<1 | 2 | 3>(1);
+    const [zoomResetCounter, setZoomResetCounter] = useState(0);
+    const [isScalpMode, setIsScalpMode] = useState(false);
+    const [strategies, setStrategies] = useState<(StrategyName | null)[]>([
+        'RSI_MFI',
+        'BOLLINGER_BOUNCE',
+        'VOLUME_BREAKOUT'
+    ]);
+    const [masterStrategy, setMasterStrategy] = useState<StrategyName | ''>('');
+
+    // Chart control handlers
+    const handleChartCountChange = (count: 1 | 2 | 3) => {
+        setChartCount(count);
+        setZoomResetCounter(prev => prev + 1);
+        if (count > chartCount) {
+            setStrategies(prev => {
+                const newStats = [...prev];
+                if (count >= 2) newStats[1] = prev[0];
+                if (count === 3) newStats[2] = prev[0];
+                return newStats;
+            });
+        }
+    };
+
+    const handleStrategyChange = (index: number, newStrategy: StrategyName | null) => {
+        setStrategies(prev => {
+            const next = [...prev];
+            next[index] = newStrategy;
+            return next;
+        });
+        setMasterStrategy('');
+    };
+
+    const handleMasterStrategyChange = (newStrategy: StrategyName | null) => {
+        setMasterStrategy(newStrategy || '');
+        if (newStrategy) {
+            setStrategies([newStrategy, newStrategy, newStrategy]);
+        }
+    };
+
+    const allStrategyNames = getAllStrategyNames();
 
     // Generate static asset list for switcher
     const switcherAssets = useMemo(() => {
@@ -175,8 +218,6 @@ export default function AnalyzePage({ params }: AnalyzePageProps) {
                         <ArrowLeft className="w-4 h-4" />
                     </Link>
 
-                    <div className="w-px h-6 bg-border" />
-
                     <div>
                         <Button
                             variant="ghost"
@@ -189,14 +230,93 @@ export default function AnalyzePage({ params }: AnalyzePageProps) {
                     </div>
                 </div>
 
-                <BacktestControls />
+                <div className="flex items-center gap-4">
+                    {/* Master Strategy Dropdown */}
+                    <div className="flex items-center gap-2">
+                        <div className="relative group min-w-[160px]">
+                            <select
+                                value={masterStrategy}
+                                onChange={(e) => handleMasterStrategyChange(e.target.value as StrategyName)}
+                                className="w-full appearance-none pl-3 pr-9 py-1.5 text-xs font-medium bg-background border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500/50 hover:border-emerald-500/50 transition-colors cursor-pointer"
+                            >
+                                <option value="" disabled>Set All Strategies...</option>
+                                {allStrategyNames.map((name) => {
+                                    const config = getStrategy(name);
+                                    return (
+                                        <option key={name} value={name}>
+                                            {config?.displayName || name}
+                                        </option>
+                                    );
+                                })}
+                            </select>
+                            <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none group-hover:text-emerald-500 transition-colors" />
+                        </div>
+                        <InfoTooltip content="Select a strategy to apply it to ALL active charts simultaneously." position="right" />
+                    </div>
+
+                    <div className="h-6 w-px bg-border" />
+
+                    {/* Scalp Mode Toggle */}
+                    <div className="flex items-center gap-1.5">
+                        <label className="flex items-center gap-1.5 cursor-pointer hover:opacity-80 transition-opacity select-none">
+                            <input
+                                type="checkbox"
+                                checked={isScalpMode}
+                                onChange={(e) => {
+                                    const enabled = e.target.checked;
+                                    setIsScalpMode(enabled);
+                                    if (enabled) {
+                                        setStrategies([strategies[0], strategies[0], strategies[0]]);
+                                    }
+                                }}
+                                className="w-3.5 h-3.5 rounded border-zinc-600 bg-transparent text-emerald-500 focus:ring-0 focus:ring-offset-0"
+                            />
+                            <span className="text-xs font-medium text-muted-foreground">Scalp Mode</span>
+                        </label>
+                        <InfoTooltip content="Instantly switch to 3-chart scalping layout: 1H, 15m, and 5m timeframes for rapid multi-timeframe analysis." position="right" />
+                    </div>
+
+                    <div className="h-6 w-px bg-border" />
+
+                    {/* Chart Count */}
+                    <div className="flex items-center gap-1.5">
+                        <div className={`flex items-center bg-muted p-1 rounded-lg border border-border/50 gap-1 ${isScalpMode ? 'opacity-50 pointer-events-none' : ''}`}>
+                            {Array.from({ length: 3 }, (_, i) => i + 1).map((count) => (
+                                <Button
+                                    key={count}
+                                    onClick={() => handleChartCountChange(count as 1 | 2 | 3)}
+                                    variant={(!isScalpMode && chartCount === count) || (isScalpMode && count === 3) ? 'emerald' : 'ghost'}
+                                    size="sm"
+                                    className={`px-4 py-2 text-xs font-bold rounded-md transition-all duration-200 h-auto ${chartCount === count
+                                        ? 'shadow-sm ring-1 ring-emerald-500'
+                                        : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
+                                        }`}
+                                >
+                                    {count}
+                                </Button>
+                            ))}
+                        </div>
+                        <InfoTooltip content="Choose how many charts to display side-by-side. New charts inherit the strategy from Chart 1." position="right" />
+                    </div>
+
+                    <div className="h-6 w-px bg-border" />
+
+                    <BacktestControls />
+                </div>
             </div>
 
             {/* Main Layout: Charts + Sidebar */}
             <div className="flex-1 flex overflow-hidden">
                 {/* Charts Area */}
                 <div className="flex-1 relative">
-                    <MultiChartView symbol={symbol} />
+                    <MultiChartView
+                        symbol={symbol}
+                        chartCount={chartCount}
+                        isScalpMode={isScalpMode}
+                        strategies={strategies}
+                        onStrategyChange={handleStrategyChange}
+                        zoomResetCounter={zoomResetCounter}
+                    />
                 </div>
 
                 {/* Analysis Sidebar */}
