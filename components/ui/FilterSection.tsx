@@ -1,7 +1,7 @@
 'use client';
 
 import { LucideIcon, ChevronDown, ChevronRight } from 'lucide-react';
-import { Button } from './Button';
+import { InfoTooltip } from './InfoTooltip';
 
 import { Checkbox } from './Checkbox';
 
@@ -31,13 +31,13 @@ export function FilterSection({
     isOpen,
     onToggle,
     children,
-    selectedCount = 0 // Default value for the new prop
-}: FilterSectionProps) {
+    selectedCount = 0, // Default value for the new prop
+    description
+}: FilterSectionProps & { description?: string }) {
     return (
         <div className="space-y-0.5">
-            <Button
-                variant="ghost"
-                className="flex items-center justify-start w-full p-2 bg-black/20 hover:bg-white/20 transition-colors rounded-lg group cursor-pointer h-auto"
+            <div
+                className="flex items-center justify-start w-full p-2 bg-black/20 hover:bg-white/20 transition-colors rounded-lg group cursor-pointer h-auto select-none"
                 onClick={() => onToggle(id)}
             >
                 <div className="flex items-center gap-2.5">
@@ -46,6 +46,7 @@ export function FilterSection({
                     <span className="text-xs font-semibold text-muted-foreground group-hover:text-foreground transition-colors uppercase tracking-wider">
                         {title}
                     </span>
+                    {description && <InfoTooltip content={description} />}
                     {selectedCount > 0 && (
                         <span className="flex items-center justify-center w-4 h-4 text-[9px] font-bold bg-emerald-500/20 text-emerald-500 rounded-full">
                             {selectedCount}
@@ -57,7 +58,7 @@ export function FilterSection({
                 ) : (
                     <ChevronRight className="w-4 h-4 ml-auto text-muted-foreground group-hover:text-foreground transition-colors" />
                 )}
-            </Button>
+            </div>
             <div className={`grid transition-[grid-template-rows] duration-300 ease-out ${isOpen ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}>
                 <div className="overflow-hidden">
                     <div className="pl-2 pr-1 pt-0.5 space-y-0.5">

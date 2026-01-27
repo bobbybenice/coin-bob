@@ -12,6 +12,7 @@
     - [x] Remove Legacy Trend/RSI/MFI Columns (User request)
 - [x] UI Refinements
     - [x] Remove asset circle icon
+    - [x] Fix Analyze Page Header Button Hover State
 - [x] Implement Customizable Strategy Columns (User request: All timeframes, all strategies)
     - [x] Update types (`AssetTrends`, `StrategyName`)
     - [x] Update store (`visibleStrategies`)
@@ -24,4 +25,10 @@
     - [x] Order Block Detection in `ict.ts`
     - [x] Integration with Analyzer & Backtester
     - [x] UI: "Convergence" Tag in Screener
+    - [x] UI: "Convergence" Tag in Screener
     - [x] UI: Diamond Markers (Green/Red Circles) in Chart
+- [x] Remove SPOT Data References (Enforce Futures Only)
+    - [x] Remove `isFuturesMode` from Store
+    - [x] Update Data Fetching (Binance Service)
+    - [x] Update Hooks (`useMarketData`, `useChartData`)
+    - [x] Update UI Components (`AssetScreener`, `AnalysisEngine`)

@@ -4,7 +4,6 @@ import { fetchHistoricalData } from '@/lib/services/market';
 import { FUTURES_SYMBOL_MAP } from '@/lib/services/futures';
 
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
-const SPOT_WS = 'wss://stream.binance.com:9443/ws';
 const FUTURES_WS = 'wss://fstream.binance.com/ws';
 
 interface CacheEntry {
@@ -45,9 +44,9 @@ function deduplicateAndSort(candles: Candle[]): Candle[] {
 }
 
 /**
- * Hook to fetch and cache chart data (klines) from Binance (Spot or Futures)
+ * Hook to fetch and cache chart data (klines) from Binance (Futures Only)
  */
-export function useChartData(symbol: string, timeframe: Timeframe, isFutures: boolean, limit: number = 500) {
+export function useChartData(symbol: string, timeframe: Timeframe, limit: number = 500) {
     const [candles, setCandles] = useState<Candle[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -65,19 +64,17 @@ export function useChartData(symbol: string, timeframe: Timeframe, isFutures: bo
         setError(null);
 
         // Cache Key needs to include futures flag
-        const cacheKey = `${isFutures ? 'F_' : 'S_'}${symbol}_${timeframe}_${limit}`;
+        const cacheKey = `F_${symbol}_${timeframe}_${limit}`;
 
         // Symbol formatting
         const baseSymbol = symbol.toUpperCase().replace('USDT', '') + 'USDT';
 
         let wsSymbol = baseSymbol.toLowerCase();
-        if (isFutures) {
-            const mapped = FUTURES_SYMBOL_MAP[baseSymbol];
-            if (mapped) wsSymbol = mapped.toLowerCase();
-        }
+        const mapped = FUTURES_SYMBOL_MAP[baseSymbol];
+        if (mapped) wsSymbol = mapped.toLowerCase();
 
         // Select API
-        const WS_BASE = isFutures ? FUTURES_WS : SPOT_WS;
+        const WS_BASE = FUTURES_WS;
 
         let ws: WebSocket | null = null;
         let isMounted = true;
@@ -98,7 +95,8 @@ export function useChartData(symbol: string, timeframe: Timeframe, isFutures: bo
                 const interval = convertTimeframe(timeframe);
 
                 // Use Server Action with multiple fallbacks (Binance Global -> Coinbase -> Binance US)
-                const fetchedCandles = await fetchHistoricalData(baseSymbol, interval, isFutures);
+                // isFutures is always true now
+                const fetchedCandles = await fetchHistoricalData(baseSymbol, interval, true);
 
                 if (!isMounted) return;
 
@@ -214,7 +212,7 @@ export function useChartData(symbol: string, timeframe: Timeframe, isFutures: bo
             if (ws) ws.close();
             if (throttleTimer) clearTimeout(throttleTimer);
         };
-    }, [symbol, timeframe, limit, isFutures]);
+    }, [symbol, timeframe, limit]);
 
     return { candles, isLoading, error };
 }

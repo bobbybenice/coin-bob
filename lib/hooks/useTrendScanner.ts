@@ -138,10 +138,12 @@ export function useTrendScanner(assets: Asset[]) {
                 let legacyData: Record<string, unknown> = {};
                 if (h4.length > 50 && h1.length > 50 && m15.length > 50) {
                     const c4h = h4.map(c => c.close);
+                    const c1d = d1.map(c => c.close);
                     const c1h = h1.map(c => c.close);
                     const c15m = m15.map(c => c.close);
 
                     const t4h = getTrend(c4h);
+                    const t1d = getTrend(c1d);
                     const t1h = getTrend(c1h);
                     const t15m = getTrend(c15m); // Note: Original code used m15 for trend?
 
@@ -153,7 +155,7 @@ export function useTrendScanner(assets: Asset[]) {
                     const mfi1h = getMFI(h1.map(c => c.high), h1.map(c => c.low), c1h, h1.map(c => c.volume));
                     const mfi15m = getMFI(m15.map(c => c.high), m15.map(c => c.low), c15m, m15.map(c => c.volume));
 
-                    legacyData = { t4h, t1h, t15m, rsi4h, rsi1h, rsi15m, mfi4h, mfi1h, mfi15m };
+                    legacyData = { t4h, t1d, t1h, t15m, rsi4h, rsi1h, rsi15m, mfi4h, mfi1h, mfi15m };
                 }
 
 

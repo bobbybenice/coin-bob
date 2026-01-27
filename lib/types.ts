@@ -104,6 +104,7 @@ export interface UserSettings {
     filters: FilterCriteria;
     timeframe: Timeframe;
     visibleStrategies: StrategyName[];
+    showKeyLevels?: boolean; // New setting for Pivots on Chart
 }
 
 export interface NewsItem {
@@ -180,6 +181,7 @@ export interface AssetTrends {
     t15m?: TrendDirection;
     t1h?: TrendDirection;
     t4h?: TrendDirection;
+    t1d?: TrendDirection;
     rsi15m?: number;
     rsi1h?: number;
     rsi4h?: number;

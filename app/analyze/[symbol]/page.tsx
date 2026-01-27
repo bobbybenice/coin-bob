@@ -1,12 +1,18 @@
 'use client';
 
+
+import { Button } from '@/components/ui/Button';
 import { use } from 'react';
 import { MultiChartView } from '@/components/analyze/MultiChartView';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, ChevronDown } from 'lucide-react';
 import Link from 'next/link';
+import AnalysisEngine from '@/components/AnalysisEngine';
+import CommandPalette from '@/components/ui/CommandPalette';
 import { useUserStore } from '@/lib/store';
 import { Play, RotateCcw, Settings } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import { WATCHLIST, SYMBOL_MAP } from '@/lib/constants';
+import { Asset } from '@/lib/types';
 
 interface AnalyzePageProps {
     params: Promise<{
@@ -120,34 +126,90 @@ function BacktestControls() {
  */
 export default function AnalyzePage({ params }: AnalyzePageProps) {
     const { symbol } = use(params);
+    const { setActiveAsset } = useUserStore();
+
+    // Set active asset on mount
+    useEffect(() => {
+        setActiveAsset(symbol);
+        return () => setActiveAsset(null); // Clear on exit
+    }, [symbol, setActiveAsset]);
+
+    const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+    const [isSwitcherOpen, setIsSwitcherOpen] = useState(false);
+
+    // Generate static asset list for switcher
+    const switcherAssets = useMemo(() => {
+        return WATCHLIST.map(ticker => {
+            const sym = ticker.replace('USDT', '');
+            const info = SYMBOL_MAP[ticker];
+            return {
+                id: info.id,
+                symbol: sym,
+                name: info.name,
+                price: 0, // Placeholder
+                change24h: 0, // Placeholder
+                volume24h: 0,
+                marketCap: 0,
+                rsi: 0,
+                isPerpetual: false
+            } as Asset;
+        });
+    }, []);
 
     return (
         <div className="h-screen flex flex-col bg-background">
+            {/* Command Palette for Switching */}
+            <CommandPalette
+                assets={switcherAssets}
+                isOpen={isSwitcherOpen}
+                onClose={() => setIsSwitcherOpen(false)}
+            />
+
             {/* Header */}
             <div className="h-16 border-b border-border flex items-center justify-between px-6 bg-card shrink-0">
                 <div className="flex items-center gap-4">
                     <Link
                         href="/"
-                        className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+                        className="flex items-center gap-2 p-3 rounded-md hover:bg-zinc-800 transition-colors text-muted-foreground hover:text-foreground"
                     >
                         <ArrowLeft className="w-4 h-4" />
-                        <span className="text-sm font-medium">Back to Screener</span>
                     </Link>
 
                     <div className="w-px h-6 bg-border" />
 
                     <div>
-                        <h1 className="text-xl font-bold text-foreground">{symbol}</h1>
-                        <p className="text-xs text-muted-foreground">Multi-Timeframe Analysis</p>
+                        <Button
+                            variant="ghost"
+                            onClick={() => setIsSwitcherOpen(true)}
+                            className="flex items-center gap-2 text-xl font-bold text-foreground px-2 py-1 h-auto -ml-2"
+                        >
+                            {symbol}
+                            <ChevronDown className="w-4 h-4 text-muted-foreground opacity-50" />
+                        </Button>
+                        <p className="text-xs text-muted-foreground px-2">Multi-Timeframe Analysis</p>
                     </div>
                 </div>
 
                 <BacktestControls />
             </div>
 
-            {/* Charts */}
-            <div className="flex-1 overflow-hidden">
-                <MultiChartView symbol={symbol} />
+            {/* Main Layout: Charts + Sidebar */}
+            <div className="flex-1 flex overflow-hidden">
+                {/* Charts Area */}
+                <div className="flex-1 relative">
+                    <MultiChartView symbol={symbol} />
+                </div>
+
+                {/* Analysis Sidebar */}
+                <div
+                    className={`border-l border-border h-full bg-card shrink-0 z-10 transition-all duration-300 ease-in-out ${isSidebarOpen ? 'w-[320px]' : 'w-[60px]'}`}
+                >
+                    <AnalysisEngine
+                        isOpen={isSidebarOpen}
+                        onToggle={() => setIsSidebarOpen(!isSidebarOpen)}
+                        showStrategies={false}
+                    />
+                </div>
             </div>
         </div>
     );

@@ -6,7 +6,7 @@ import { subscribeToBinanceStream } from '../binance';
 import { useUserStore } from '../store';
 
 export function useMarketData() {
-    const { settings, isFuturesMode } = useUserStore();
+    const { settings } = useUserStore();
     const [assets, setAssets] = useState<Asset[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
@@ -14,13 +14,13 @@ export function useMarketData() {
         console.log("CoinBob Market Data Hook v2.1 - Loaded");
         setIsLoading(true);
         // Subscribe to the simulation stream
-        const unsubscribe = subscribeToBinanceStream(settings.timeframe, isFuturesMode, (data) => {
+        const unsubscribe = subscribeToBinanceStream(settings.timeframe, (data) => {
             setAssets(data);
             setIsLoading(false);
         });
 
         return () => unsubscribe();
-    }, [settings.timeframe, isFuturesMode]);
+    }, [settings.timeframe]);
 
     return { assets, isLoading, error: null };
 }

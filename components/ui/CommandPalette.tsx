@@ -83,12 +83,16 @@ export default function CommandPalette({ assets, isOpen, onClose, currentQuery, 
                         className="h-12 pl-11 pr-12 border-none focus-visible:ring-0 rounded-none shadow-none"
                         onKeyDown={(e) => {
                             if (e.key === 'Escape') {
-                                if (onClear) onClear(); // If user escapes via Input, clear filter?
-                                // "Hitting Escape should reset the search query and display all assets again."
+                                if (onClear) onClear();
                                 onClose();
                             }
                             if (e.key === 'Enter') {
-                                if (onSearch) {
+                                if (searchResults.length > 0) {
+                                    // Select first result
+                                    const topResult = searchResults[0];
+                                    router.push(`/analyze/${topResult.symbol}`);
+                                    onClose();
+                                } else if (onSearch) {
                                     onSearch(searchQuery);
                                 }
                             }

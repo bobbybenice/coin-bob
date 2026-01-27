@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { ChartInstance } from './ChartInstance';
 import { Button } from '../ui/Button';
+import { InfoTooltip } from '../ui/InfoTooltip';
 
 interface MultiChartViewProps {
     symbol: string;
@@ -22,6 +23,7 @@ import { ChevronDown } from 'lucide-react'; // Import Icon
 export function MultiChartView({ symbol }: MultiChartViewProps) {
     const [chartCount, setChartCount] = useState<1 | 2 | 3>(1);
     const [zoomResetCounter, setZoomResetCounter] = useState(0);
+    const [isScalpMode, setIsScalpMode] = useState(false);
 
     // State for individual chart strategies
     // Initialize with standard defaults
@@ -80,15 +82,15 @@ export function MultiChartView({ symbol }: MultiChartViewProps) {
     return (
         <div className="flex flex-col h-full gap-4">
             {/* Header Controls */}
-            <div className="flex items-center justify-between p-4 bg-card border-b border-border">
-                <h2 className="text-lg font-semibold text-foreground">
-                    {symbol} Analysis
-                </h2>
+            <div className="flex items-center justify-end p-4 bg-card border-b border-border">
+
 
                 <div className="flex items-center gap-6">
                     {/* Master Strategy Dropdown */}
                     <div className="flex items-center gap-2">
-                        <span className="text-xs text-muted-foreground font-medium">Master:</span>
+                        <div className="flex items-center">
+                            <InfoTooltip content="Select a strategy to apply it to ALL active charts simultaneously." />
+                        </div>
                         <div className="relative group min-w-[160px]">
                             <select
                                 value={masterStrategy}
@@ -111,43 +113,45 @@ export function MultiChartView({ symbol }: MultiChartViewProps) {
 
                     <div className="h-4 w-px bg-border/50"></div>
 
+                    {/* Scalp Mode Toggle */}
+                    <label className="flex items-center gap-1.5 cursor-pointer hover:opacity-80 transition-opacity select-none">
+                        <input
+                            type="checkbox"
+                            checked={isScalpMode}
+                            onChange={(e) => {
+                                const enabled = e.target.checked;
+                                setIsScalpMode(enabled);
+                                if (enabled) {
+                                    // Sync all charts to the main chart's strategy
+                                    setStrategies([strategies[0], strategies[0], strategies[0]]);
+                                }
+                            }}
+                            className="w-3.5 h-3.5 rounded border-zinc-600 bg-transparent text-emerald-500 focus:ring-0 focus:ring-offset-0"
+                        />
+                        <span className="text-xs font-medium text-muted-foreground">Scalp Mode</span>
+                    </label>
+
+                    <div className="h-4 w-px bg-border/50"></div>
+
                     {/* Chart Count */}
                     <div className="flex items-center gap-2">
-                        <span className="text-xs text-muted-foreground font-medium mr-2">Charts:</span>
-                        <div className="flex items-center bg-muted p-1 rounded-lg border border-border/50 gap-1">
-                            <Button
-                                onClick={() => handleChartCountChange(1)}
-                                variant={chartCount === 1 ? 'emerald' : 'ghost'}
-                                size="sm"
-                                className={`px-4 py-2 text-xs font-bold rounded-md transition-all duration-200 h-auto ${chartCount === 1
-                                    ? 'shadow-sm ring-1 ring-emerald-500'
-                                    : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
-                                    }`}
-                            >
-                                1
-                            </Button>
-                            <Button
-                                onClick={() => handleChartCountChange(2)}
-                                variant={chartCount === 2 ? 'emerald' : 'ghost'}
-                                size="sm"
-                                className={`px-4 py-2 text-xs font-bold rounded-md transition-all duration-200 h-auto ${chartCount === 2
-                                    ? 'shadow-sm ring-1 ring-emerald-500'
-                                    : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
-                                    }`}
-                            >
-                                2
-                            </Button>
-                            <Button
-                                onClick={() => handleChartCountChange(3)}
-                                variant={chartCount === 3 ? 'emerald' : 'ghost'}
-                                size="sm"
-                                className={`px-4 py-2 text-xs font-bold rounded-md transition-all duration-200 h-auto ${chartCount === 3
-                                    ? 'shadow-sm ring-1 ring-emerald-500'
-                                    : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
-                                    }`}
-                            >
-                                3
-                            </Button>
+                        <div className={`flex items-center bg-muted p-1 rounded-lg border border-border/50 gap-1 ${isScalpMode ? 'opacity-50 pointer-events-none' : ''}`}>
+                            {Array.from({ length: 3 }, (_, i) => i + 1).map((count) => (
+                                <Button
+                                    key={count}
+                                    onClick={() => handleChartCountChange(count as 1 | 2 | 3)}
+                                    // Visual fix: If Scalp Mode is on, we force look of 3 but allow toggle to be "disabled" visually
+                                    // Actually, let's show 3 active if scalp mode 
+                                    variant={(!isScalpMode && chartCount === count) || (isScalpMode && count === 3) ? 'emerald' : 'ghost'}
+                                    size="sm"
+                                    className={`px-4 py-2 text-xs font-bold rounded-md transition-all duration-200 h-auto ${chartCount === count
+                                        ? 'shadow-sm ring-1 ring-emerald-500'
+                                        : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
+                                        }`}
+                                >
+                                    {count}
+                                </Button>
+                            ))}
                         </div>
                     </div>
                 </div>
@@ -155,27 +159,29 @@ export function MultiChartView({ symbol }: MultiChartViewProps) {
 
             {/* Charts Grid */}
             <div
-                className={`flex-1 grid gap-4 px-4 pb-4 ${chartCount === 1
-                    ? 'grid-cols-1'
+                className={`flex-1 grid gap-4 px-4 pb-4 ${isScalpMode || chartCount === 3
+                    ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'
                     : chartCount === 2
                         ? 'grid-cols-1 md:grid-cols-2'
-                        : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'
+                        : 'grid-cols-1'
                     }`}
             >
                 {/* Chart 1 - Always visible */}
                 <ChartInstance
                     symbol={symbol}
                     initialTimeframe="1d"
+                    timeframe={isScalpMode ? '1h' : undefined}
                     strategy={strategies[0]}
                     onStrategyChange={(val) => handleStrategyChange(0, val)}
                     onZoomReset={zoomResetCounter}
                 />
 
                 {/* Chart 2 - Visible when chartCount >= 2 */}
-                {chartCount >= 2 && (
+                {(isScalpMode || chartCount >= 2) && (
                     <ChartInstance
                         symbol={symbol}
                         initialTimeframe="4h"
+                        timeframe={isScalpMode ? '15m' : undefined}
                         strategy={strategies[1]}
                         onStrategyChange={(val) => handleStrategyChange(1, val)}
                         onZoomReset={zoomResetCounter}
@@ -183,10 +189,11 @@ export function MultiChartView({ symbol }: MultiChartViewProps) {
                 )}
 
                 {/* Chart 3 - Visible when chartCount === 3 */}
-                {chartCount === 3 && (
+                {(isScalpMode || chartCount === 3) && (
                     <ChartInstance
                         symbol={symbol}
                         initialTimeframe="1h"
+                        timeframe={isScalpMode ? '5m' : undefined}
                         strategy={strategies[2]}
                         onStrategyChange={(val) => handleStrategyChange(2, val)}
                         onZoomReset={zoomResetCounter}

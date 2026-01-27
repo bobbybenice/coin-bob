@@ -1,10 +1,11 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import { createChart, CandlestickData, Time, CandlestickSeries, ISeriesApi, createSeriesMarkers } from 'lightweight-charts';
+import { createChart, CandlestickData, Time, CandlestickSeries, ISeriesApi, createSeriesMarkers, SeriesMarker, IPriceLine } from 'lightweight-charts';
 import { Timeframe, StrategyName } from '@/lib/types';
 import { useChartData } from '@/lib/hooks/useChartData';
 import { useStrategyMarkers } from '@/lib/hooks/useStrategyMarkers';
+import { useKeyLevels } from '@/lib/hooks/useKeyLevels';
 import { getAllStrategyNames, getStrategy } from '@/lib/engine/strategies';
 import { runBacktest } from '@/lib/engine/backtester';
 import { BacktestResult } from '@/lib/types'; // Import BacktestResult type
@@ -16,6 +17,7 @@ interface ChartInstanceProps {
     initialTimeframe?: Timeframe;
     initialStrategy?: StrategyName | null; // For uncontrolled mode
     strategy?: StrategyName | null;        // For controlled mode
+    timeframe?: Timeframe;                 // For controlled mode (Scalp Mode)
     onZoomReset?: number;
     onStrategyChange?: (strategy: StrategyName | null) => void;
 }
@@ -28,6 +30,7 @@ export function ChartInstance({
     initialTimeframe = '1h',
     initialStrategy = null,
     strategy, // controlled prop
+    timeframe: controlledTimeframe, // controlled prop
     onZoomReset = 0,
     onStrategyChange
 }: ChartInstanceProps) {
@@ -36,19 +39,25 @@ export function ChartInstance({
     const candleSeriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null);
     const markerPluginRef = useRef<ReturnType<typeof createSeriesMarkers<Time>> | null>(null);
 
-    const [timeframe, setTimeframe] = useState<Timeframe>(initialTimeframe);
+    const [internalTimeframe, setInternalTimeframe] = useState<Timeframe>(initialTimeframe);
+
+    // Determine effective timeframe: Controlled Prop > Internal State
+    const timeframe = controlledTimeframe ?? internalTimeframe;
     // Internal state mainly for uncontrolled usage
     const [internalStrategy, setInternalStrategy] = useState<StrategyName | null>(initialStrategy);
 
     // Determine effective strategy: Controlled Prop > Internal State
-    const selectedStrategy = strategy !== undefined ? strategy : internalStrategy;
+    const selectedStrategy = strategy ?? internalStrategy;
 
-    const { isBacktestMode, backtestOptions, isFuturesMode } = useUserStore();
+    // Key Levels & Settings
+    const { isBacktestMode, backtestOptions, settings } = useUserStore();
+    const { levels } = useKeyLevels(symbol);
+    const priceLinesRef = useRef<IPriceLine[]>([]); // Store price line references to remove them
+
     const [backtestResult, setBacktestResult] = useState<BacktestResult | null>(null);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const [backtestMarkers, setBacktestMarkers] = useState<any[]>([]);
+    const [backtestMarkers, setBacktestMarkers] = useState<SeriesMarker<Time>[]>([]);
 
-    const { candles, isLoading, error } = useChartData(symbol, timeframe, isFuturesMode);
+    const { candles, isLoading, error } = useChartData(symbol, timeframe);
     const { markers: liveMarkers, strategyStatus, sentiment } = useStrategyMarkers(candles, selectedStrategy);
 
     // Calculate Backtest Results when in mode
@@ -116,6 +125,9 @@ export function ChartInstance({
             },
             rightPriceScale: {
                 borderColor: '#27272a',
+                visible: true,
+                precision: 4,
+                minMove: 0.0001,
             },
         });
 
@@ -247,6 +259,39 @@ export function ChartInstance({
 
     }, [activeZones, candles]);
 
+    // Plot Key Levels
+    useEffect(() => {
+        if (!candleSeriesRef.current) return;
+
+        // Clear existing lines
+        priceLinesRef.current.forEach(line => {
+            candleSeriesRef.current?.removePriceLine(line);
+        });
+        priceLinesRef.current = [];
+
+        // If enabled and data exists, draw new lines
+        if (settings.showKeyLevels && levels) {
+            const createLine = (price: number, color: string, title: string) => {
+                const line = candleSeriesRef.current?.createPriceLine({
+                    price: price,
+                    color: color,
+                    lineWidth: 1,
+                    lineStyle: 2, // Dashed
+                    axisLabelVisible: true,
+                    title: title,
+                });
+                if (line) priceLinesRef.current.push(line);
+            };
+
+            createLine(levels.r2, '#f43f5e', 'R2');
+            createLine(levels.r1, '#fb7185', 'R1');
+            createLine(levels.p, '#fbbf24', 'Pivot');
+            createLine(levels.s1, '#34d399', 'S1');
+            createLine(levels.s2, '#10b981', 'S2');
+        }
+
+    }, [settings.showKeyLevels, levels]);
+
     // Reset zoom when chartCount changes
     useEffect(() => {
         if (onZoomReset > 0 && chartRef.current) {
@@ -265,8 +310,13 @@ export function ChartInstance({
                     <div className="relative group">
                         <select
                             value={timeframe}
-                            onChange={(e) => setTimeframe(e.target.value as Timeframe)}
-                            className="appearance-none pl-3 pr-9 py-1.5 text-xs font-medium bg-background border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500/50 hover:border-emerald-500/50 transition-colors cursor-pointer"
+                            onChange={(e) => {
+                                if (!controlledTimeframe) {
+                                    setInternalTimeframe(e.target.value as Timeframe);
+                                }
+                            }}
+                            disabled={!!controlledTimeframe}
+                            className={`appearance-none pl-3 pr-9 py-1.5 text-xs font-medium bg-background border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500/50 hover:border-emerald-500/50 transition-colors cursor-pointer ${controlledTimeframe ? 'opacity-50 cursor-not-allowed bg-muted' : ''}`}
                         >
                             <option value="1m">1m</option>
                             <option value="5m">5m</option>
@@ -306,10 +356,6 @@ export function ChartInstance({
                         </select>
                         <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none group-hover:text-emerald-500 transition-colors" />
                     </div>
-                </div>
-
-                <div className="text-xs text-muted-foreground">
-                    {symbol}
                 </div>
             </div>
 

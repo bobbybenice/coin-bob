@@ -121,7 +121,8 @@ export async function fetchOpenInterest(symbol: string): Promise<number> {
     }
 }
 
-// Map for Spot symbols -> Futures symbols (Binance uses 1000 prefix for meme coins)
+// Map for Base symbols -> Futures symbols (Binance uses 1000 prefix for meme coins)
+// We keep this specific list for hard overrides if needed, but dynamic resolution is preferred.
 export const FUTURES_SYMBOL_MAP: Record<string, string> = {
     'BONKUSDT': '1000BONKUSDT',
     'PEPEUSDT': '1000PEPEUSDT',
@@ -130,12 +131,55 @@ export const FUTURES_SYMBOL_MAP: Record<string, string> = {
     'LUNCUSDT': '1000LUNCUSDT',
     'XECUSDT': '1000XECUSDT',
     'SATSUSDT': '1000SATSUSDT',
-    'RATSUSDT': '1000RATSUSDT'
+    'RATSUSDT': '1000RATSUSDT',
+    'MOGUSDT': '1000MOGUSDT',
+    'CATUSDT': '1000CATUSDT',
+    'POPCATUSDT': '1000POPCATUSDT'
+    // Dynamic fallback added below
 };
+
+// Check if a symbol exists in the valid futures list, or determine if it needs a prefix.
+export async function resolveFuturesSymbol(symbol: string): Promise<string> {
+    // 1. Static Map (Fastest)
+    if (FUTURES_SYMBOL_MAP[symbol]) return FUTURES_SYMBOL_MAP[symbol];
+
+    // 2. Direct check (maybe it works as is) or try prefixes
+    try {
+        const tickers = await fetchFuturesDailyStats(); // Uses cache internally
+        const validSymbols = new Set(tickers.map(t => t.symbol));
+
+        // Case A: Symbol exists exactly (e.g. BTCUSDT)
+        if (validSymbols.has(symbol)) return symbol;
+
+        // Case B: Symbol needs 1000 prefix (e.g. PEPEUSDT -> 1000PEPEUSDT)
+        // Try adding 1000
+        const prefixed = `1000${symbol}`;
+        if (validSymbols.has(prefixed)) {
+            // Cache it for next time
+            FUTURES_SYMBOL_MAP[symbol] = prefixed;
+            return prefixed;
+        }
+
+        // Case C: Maybe the input was bare symbol "ETH" and needs "USDT" (unlikely in this app flow, but safe)
+        if (!symbol.includes('USDT')) {
+            const withUsdt = `${symbol}USDT`;
+            if (validSymbols.has(withUsdt)) return withUsdt;
+            const with1000Usdt = `1000${symbol}USDT`;
+            if (validSymbols.has(with1000Usdt)) return with1000Usdt;
+        }
+
+        // Return original as fail-safe
+        return symbol;
+    } catch {
+        // Fallback to original if check fails or cached list missing
+        return symbol;
+    }
+}
 
 export async function fetchFuturesKlines(symbol: string, interval: string = '1h', limit: number = 100) {
     try {
-        const querySymbol = FUTURES_SYMBOL_MAP[symbol] || symbol;
+        const querySymbol = await resolveFuturesSymbol(symbol);
+
         const res = await fetch(`${FAPI_BASE}/fapi/v1/klines?symbol=${querySymbol}&interval=${interval}&limit=${limit}`, {
             cache: 'no-store'
         });

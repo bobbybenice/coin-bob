@@ -17,7 +17,7 @@ type SortDirection = 'asc' | 'desc';
 
 export default function AssetScreener() {
   const router = useRouter();
-  const { settings, isLoaded, activeAsset, isFuturesMode, toggleFuturesMode } = useUserStore();
+  const { settings, isLoaded, activeAsset } = useUserStore();
   const { trends } = useTrendsStore();
   const { assets, isLoading } = useMarketData();
 
@@ -146,25 +146,8 @@ export default function AssetScreener() {
             {/* Timeframe Selector Moved Here */}
             <TimeframeSelector />
 
-            <div className="flex items-center bg-muted p-1 rounded-lg border border-border/50 gap-1">
-              <Button
-                size="sm"
-                variant={!isFuturesMode ? 'default' : 'ghost'}
-                onClick={() => { if (isFuturesMode) toggleFuturesMode(); }}
-                className={`text-xs font-bold transition-all duration-200 ${!isFuturesMode
-                  ? 'bg-background text-foreground shadow-sm ring-1 ring-black/5 dark:ring-white/10 hover:bg-background'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-background/50'}`}
-              >
-                SPOT
-              </Button>
-              <Button
-                size="sm"
-                variant={isFuturesMode ? 'emerald' : 'ghost'}
-                onClick={() => { if (!isFuturesMode) toggleFuturesMode(); }}
-                className={`text-xs font-bold transition-all duration-200 ${!isFuturesMode && 'text-muted-foreground hover:text-emerald-500 hover:bg-emerald-500/10'}`}
-              >
-                PERPS
-              </Button>
+            <div className="hidden">
+              {/* Space reserved for future filters if needed */}
             </div>
 
             <Button
@@ -253,7 +236,6 @@ export default function AssetScreener() {
                   asset={asset}
                   trend={trends[asset.symbol]}
                   isActive={activeAsset === asset.symbol}
-                  isFuturesMode={isFuturesMode}
                   settings={settings}
                   onAnalyze={(symbol) => router.push(`/analyze/${symbol}`)}
                 />
@@ -273,9 +255,7 @@ export default function AssetScreener() {
                           <span className="text-2xl opacity-20">⚠</span>
                           <p className="text-sm font-medium">Data Unavailable</p>
                           <p className="text-xs text-muted-foreground w-64">
-                            {isFuturesMode
-                              ? "Unable to fetch Futures data. This may be due to regional restrictions or API limits."
-                              : "Unable to connect to market data stream."}
+                            Unable to fetch Futures data. This may be due to regional restrictions or API limits.
                           </p>
                         </>
                       ) : (

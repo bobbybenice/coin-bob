@@ -6,7 +6,6 @@ interface AssetRowProps {
     asset: Asset;
     trend?: AssetTrends;
     isActive: boolean;
-    isFuturesMode: boolean;
     settings: UserSettings;
     onAnalyze: (symbol: string) => void;
 }
@@ -15,7 +14,6 @@ export default function AssetRow({
     asset,
     trend,
     isActive,
-    // isFuturesMode, // Unused
     settings,
     onAnalyze,
 }: AssetRowProps) {

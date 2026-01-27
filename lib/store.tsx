@@ -25,6 +25,7 @@ const DEFAULT_SETTINGS: UserSettings = {
     },
     timeframe: '1d',
     visibleStrategies: ['RSI_MFI', 'BOLLINGER_BOUNCE'],
+    showKeyLevels: false,
 };
 
 
@@ -38,10 +39,8 @@ interface UserContextType {
     setTimeframe: (timeframe: Timeframe) => void;
     toggleVisibleStrategy: (strategy: StrategyName) => void;
     toggleAllStrategies: (enable: boolean, strategies: StrategyName[]) => void;
+    toggleKeyLevels: () => void;
 
-    // Futures Logic
-    isFuturesMode: boolean;
-    toggleFuturesMode: () => void;
 
     // Backtest Mode
     isBacktestMode: boolean;
@@ -117,10 +116,11 @@ export function UserProvider({ children }: { children: ReactNode }) {
         }));
     };
 
-    const [isFuturesMode, setIsFuturesMode] = useState(true);
-
-    const toggleFuturesMode = () => {
-        setIsFuturesMode(prev => !prev);
+    const toggleKeyLevels = () => {
+        setSettings((prev) => ({
+            ...prev,
+            showKeyLevels: !prev.showKeyLevels
+        }));
     };
 
     const [isBacktestMode, setIsBacktestMode] = useState(false);
@@ -151,8 +151,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
             setTimeframe,
             toggleVisibleStrategy,
             toggleAllStrategies,
-            isFuturesMode,
-            toggleFuturesMode,
+            toggleKeyLevels,
             isBacktestMode,
             toggleBacktestMode,
             backtestOptions,
