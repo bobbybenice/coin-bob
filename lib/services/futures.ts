@@ -197,12 +197,18 @@ export async function fetchFuturesKlines(symbol: string, interval: string, limit
         // Check cache first
         const cached = klinesCache.get(cacheKey);
         if (cached && (now - cached.timestamp < KLINES_TTL)) {
+            console.log(`[Cache HIT] ${cacheKey} (age: ${Math.round((now - cached.timestamp) / 1000)}s)`);
             return cached.data;
         }
 
         // Check for in-flight request
         const inFlight = klinesPromises.get(cacheKey);
-        if (inFlight) return inFlight;
+        if (inFlight) {
+            console.log(`[Cache DEDUP] ${cacheKey} - reusing in-flight request`);
+            return inFlight;
+        }
+
+        console.log(`[Cache MISS] ${cacheKey} - fetching fresh data`);
 
         // Create new request
         const promise = (async () => {
@@ -225,6 +231,7 @@ export async function fetchFuturesKlines(symbol: string, interval: string, limit
 
                 // Cache the result
                 klinesCache.set(cacheKey, { data: candles, timestamp: Date.now() });
+                console.log(`[Cache STORE] ${cacheKey} - stored ${candles.length} candles`);
                 return candles;
             } finally {
                 klinesPromises.delete(cacheKey);

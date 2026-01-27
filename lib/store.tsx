@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
+import { useState, useEffect, createContext, useContext, ReactNode, useCallback, useMemo } from 'react';
 import { UserSettings, FilterCriteria, Timeframe, AssetTrends, StrategyName } from './types';
 import { BacktestOptions } from './engine/backtester';
 
@@ -49,9 +49,17 @@ interface UserContextType {
     updateBacktestOptions: (options: Partial<BacktestOptions>) => void;
 }
 
+interface ScanProgress {
+    scanned: number;
+    total: number;
+    isInitialScan: boolean;
+}
+
 interface TrendsContextType {
     trends: Record<string, AssetTrends>;
     updateAssetTrend: (symbol: string, data: Partial<AssetTrends>) => void;
+    scanProgress: ScanProgress;
+    updateScanProgress: (progress: Partial<ScanProgress>) => void;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -164,6 +172,11 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
 export function TrendsProvider({ children }: { children: ReactNode }) {
     const [trends, setTrends] = useState<Record<string, AssetTrends>>({});
+    const [scanProgress, setScanProgress] = useState<ScanProgress>({
+        scanned: 0,
+        total: 0,
+        isInitialScan: true
+    });
 
     // Load Trends Cache (Once on mount)
     useEffect(() => {
@@ -184,15 +197,26 @@ export function TrendsProvider({ children }: { children: ReactNode }) {
         }
     }, [trends]);
 
-    const updateAssetTrend = (symbol: string, data: Partial<AssetTrends>) => {
+    const updateAssetTrend = useCallback((symbol: string, data: Partial<AssetTrends>) => {
         setTrends(prev => ({
             ...prev,
             [symbol]: { ...prev[symbol], ...data, lastUpdated: Date.now() }
         }));
-    };
+    }, []);
+
+    const updateScanProgress = useCallback((progress: Partial<ScanProgress>) => {
+        setScanProgress(prev => ({ ...prev, ...progress }));
+    }, []);
+
+    const contextValue = useMemo(() => ({
+        trends,
+        updateAssetTrend,
+        scanProgress,
+        updateScanProgress
+    }), [trends, updateAssetTrend, scanProgress, updateScanProgress]);
 
     return (
-        <TrendsContext.Provider value={{ trends, updateAssetTrend }}>
+        <TrendsContext.Provider value={contextValue}>
             {children}
         </TrendsContext.Provider>
     );

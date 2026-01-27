@@ -202,8 +202,8 @@ export function useChartData(symbol: string, timeframe: Timeframe, limit: number
                 }
             };
 
-            ws.onerror = (e) => {
-                console.error('WebSocket error:', e);
+            ws.onerror = () => {
+                // console.error('WebSocket error:', e);
             };
         });
 

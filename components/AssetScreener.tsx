@@ -19,7 +19,7 @@ type SortDirection = 'asc' | 'desc';
 export default function AssetScreener() {
   const router = useRouter();
   const { settings, isLoaded, activeAsset } = useUserStore();
-  const { trends } = useTrendsStore();
+  const { trends, scanProgress } = useTrendsStore();
   const { assets, isLoading } = useMarketData();
 
   // Background Scanner only - Alerts UI moved to Analysis Engine
@@ -256,7 +256,23 @@ export default function AssetScreener() {
             </Button>
 
             <div className="flex items-center gap-3 text-xs font-mono">
-              {isLoading ? (
+              {scanProgress.isInitialScan && scanProgress.total > 0 ? (
+                <div className="flex items-center gap-2">
+                  <span className="text-blue-400 flex items-center gap-1.5 animate-pulse">
+                    <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                    SCANNING
+                  </span>
+                  <span className="text-muted-foreground w-[50px]">
+                    {scanProgress.scanned}/{scanProgress.total}
+                  </span>
+                  <div className="w-24 h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-blue-500 transition-all duration-300"
+                      style={{ width: `${(scanProgress.scanned / scanProgress.total) * 100}%` }}
+                    />
+                  </div>
+                </div>
+              ) : isLoading ? (
                 <span className="text-amber-500 flex items-center gap-1.5 animate-pulse w-[80px]">
                   <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
                   SYNCING
