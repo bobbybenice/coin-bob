@@ -49,7 +49,12 @@ export async function fetchFuturesDailyStats(): Promise<FuturesTicker[]> {
                 // cache: 'no-store', // Optional: standard fetch cache control if needed, but defaults are usually fine for real-time
                 // header moved to default
             });
-            if (!res.ok) throw new Error('Failed to fetch futures ticker');
+
+            if (!res.ok) {
+                console.warn(`Futures ticker fetch failed: ${res.status} ${res.statusText}`);
+                return [];
+            }
+
             const data = await res.json();
 
             tickerCache = { data, timestamp: Date.now() };

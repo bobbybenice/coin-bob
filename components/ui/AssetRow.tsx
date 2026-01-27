@@ -104,16 +104,18 @@ export default function AssetRow({
                             );
                         }
 
-                        // Determine Winner
-                        // If more bullish than both bearish and neutral = bullish (green)
-                        // If more bearish than both bullish and neutral = bearish (red)
-                        // Note: User logic says "more than NEUTRAL" too.
-                        // Implication: If 3 Bull, 1 Bear, 4 Neutral -> Bull (3) is NOT > Neutral (4) -> So Gray?
-                        // "If more bullish than both bearish and neutral" -> Bull > Bear AND Bull > Neutral.
+                        // Determine Bias using simple majority rule
+                        // Show bullish if more LONG than SHORT (neutral doesn't matter)
+                        // Show bearish if more SHORT than LONG (neutral doesn't matter)
+                        // Only show neutral if equal or no directional signals
 
                         let finalSignal = 'NEUTRAL';
-                        if (bull > bear && bull > neutral) finalSignal = 'BULLISH';
-                        else if (bear > bull && bear > neutral) finalSignal = 'BEARISH';
+                        if (bull > bear) {
+                            finalSignal = 'BULLISH';
+                        } else if (bear > bull) {
+                            finalSignal = 'BEARISH';
+                        }
+                        // If bull === bear, stays NEUTRAL
 
                         return (
                             <div
