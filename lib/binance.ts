@@ -266,6 +266,7 @@ export function subscribeToBinanceStream(timeframe: Timeframe, isFuturesMode: bo
         };
 
         ws.onerror = (e) => {
+            if (!isRunning) return; // Suppress errors if we have already cleaned up (e.g. Strict Mode double-mount)
             console.error("Binance WS Error", e);
             ws?.close();
         };

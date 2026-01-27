@@ -5,7 +5,7 @@ import { calculateEMA } from '../lib/engine/indicators/ema';
 import { calculateMACD } from '../lib/engine/indicators/macd';
 import { calculateBollingerBands } from '../lib/engine/indicators/bollinger';
 import { calculateATR } from '../lib/engine/indicators/atr';
-import { calculateADX } from '../lib/engine/indicators/adx';
+
 import { Candle } from '../lib/types';
 
 // Helper to create simple candles (C=val, H=val, L=val, O=val)
@@ -33,10 +33,32 @@ describe('Technical Indicators (Manual Implementations)', () => {
             expect(result.value).not.toBeNaN();
         });
 
+        it('should calculate RSI correctly for downtrend', () => {
+            // Steadily decreasing prices -> RSI should be low
+            const values = Array.from({ length: 30 }, (_, i) => 160 - i * 2);
+            const candles = createCandles(values);
+            const result = calculateRSI(candles, 14);
+
+            expect(result.value).toBeLessThan(30);
+            expect(result.value).not.toBeNaN();
+        });
+
         it('should return neutral for insufficient data', () => {
             const candles = createCandles([100, 101, 102]);
             const result = calculateRSI(candles, 14);
             expect(result.value).toBeNaN();
+        });
+    });
+
+    describe('MFI', () => {
+        it('should calculate MFI correctly for downtrend', () => {
+            // Price dropping, Volume constant
+            const values = Array.from({ length: 30 }, (_, i) => 160 - i * 2);
+            const candles = createCandles(values);
+            const result = calculateMFI(candles, 14);
+
+            expect(result.value).toBeLessThan(30);
+            expect(result.value).not.toBeNaN();
         });
     });
 
