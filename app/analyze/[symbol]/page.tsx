@@ -186,7 +186,6 @@ export default function AnalyzePage({ params }: AnalyzePageProps) {
                             {symbol}
                             <ChevronDown className="w-4 h-4 text-muted-foreground opacity-50" />
                         </Button>
-                        <p className="text-xs text-muted-foreground px-2">Multi-Timeframe Analysis</p>
                     </div>
                 </div>
 

@@ -126,8 +126,6 @@ export function ChartInstance({
             rightPriceScale: {
                 borderColor: '#27272a',
                 visible: true,
-                precision: 4,
-                minMove: 0.0001,
             },
         });
 
