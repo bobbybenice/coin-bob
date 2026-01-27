@@ -24,11 +24,16 @@ export interface OpenInterest {
 // CACHE STATE
 let fundingCache: { data: PremiumIndex[], timestamp: number } | null = null;
 let fundingPromise: Promise<PremiumIndex[]> | null = null;
-const FUNDING_TTL = 60 * 1000; // 60 Seconds (Safe, as funding updates every 8h)
+const FUNDING_TTL = 5 * 60 * 1000; // 5 Minutes (Funding updates every 8h, so this is very safe)
 
 let tickerCache: { data: FuturesTicker[], timestamp: number } | null = null;
 let tickerPromise: Promise<FuturesTicker[]> | null = null;
-const TICKER_TTL = 1000; // 1 Second (Dedups simultaneous calls from multiple components)
+const TICKER_TTL = 30 * 1000; // 30 Seconds (Prevents excessive polling)
+
+// Klines Cache - Prevents duplicate requests for same data
+const klinesCache = new Map<string, { data: any[], timestamp: number }>();
+const klinesPromises = new Map<string, Promise<any[]>>();
+const KLINES_TTL = 60 * 1000; // 1 Minute - Historical data doesn't change rapidly
 
 // Batch fetch 24h ticker for all symbols (lightweight)
 export async function fetchFuturesDailyStats(): Promise<FuturesTicker[]> {
@@ -181,27 +186,55 @@ export async function resolveFuturesSymbol(symbol: string): Promise<string> {
     }
 }
 
-export async function fetchFuturesKlines(symbol: string, interval: string = '1h', limit: number = 100) {
+// Fetch Historical Klines (Candles) with aggressive caching
+export async function fetchFuturesKlines(symbol: string, interval: string, limit: number = 500): Promise<any[]> {
     try {
+        // Dynamic Symbol Resolution
         const querySymbol = await resolveFuturesSymbol(symbol);
+        const cacheKey = `${querySymbol}_${interval}_${limit}`;
+        const now = Date.now();
 
-        const res = await fetch(`${FAPI_BASE}/fapi/v1/klines?symbol=${querySymbol}&interval=${interval}&limit=${limit}`, {
-            cache: 'no-store'
-        });
-        if (!res.ok) return [];
-        const json = await res.json();
-        if (!Array.isArray(json)) return [];
+        // Check cache first
+        const cached = klinesCache.get(cacheKey);
+        if (cached && (now - cached.timestamp < KLINES_TTL)) {
+            return cached.data;
+        }
 
-        return json.map((d: any[]) => ({
-            time: d[0],
-            open: parseFloat(d[1]),
-            high: parseFloat(d[2]),
-            low: parseFloat(d[3]),
-            close: parseFloat(d[4]),
-            volume: parseFloat(d[5])
-        }));
+        // Check for in-flight request
+        const inFlight = klinesPromises.get(cacheKey);
+        if (inFlight) return inFlight;
+
+        // Create new request
+        const promise = (async () => {
+            try {
+                const res = await fetch(`${FAPI_BASE}/fapi/v1/klines?symbol=${querySymbol}&interval=${interval}&limit=${limit}`);
+                if (!res.ok) {
+                    console.warn(`Futures Klines Error: ${res.status} ${res.statusText} for ${querySymbol}`);
+                    return [];
+                }
+                const data = await res.json();
+
+                const candles = Array.isArray(data) ? data.map((d: any[]) => ({
+                    time: d[0],
+                    open: parseFloat(d[1]),
+                    high: parseFloat(d[2]),
+                    low: parseFloat(d[3]),
+                    close: parseFloat(d[4]),
+                    volume: parseFloat(d[5])
+                })) : [];
+
+                // Cache the result
+                klinesCache.set(cacheKey, { data: candles, timestamp: Date.now() });
+                return candles;
+            } finally {
+                klinesPromises.delete(cacheKey);
+            }
+        })();
+
+        klinesPromises.set(cacheKey, promise);
+        return promise;
     } catch (error) {
-        console.error(`Futures Klines Error for ${symbol}:`, error);
+        console.error('Futures Klines Error:', error);
         return [];
     }
 }

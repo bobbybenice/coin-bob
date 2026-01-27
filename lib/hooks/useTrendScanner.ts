@@ -101,10 +101,10 @@ export function useTrendScanner(assets: Asset[]) {
             indexRef.current = (indexRef.current + 1) % assets.length;
 
             try {
-                // Check cache validity (1 min for deep scan, was 5 min)
+                // Check cache validity - 2 minutes for balance between freshness and rate limiting
                 const cached = trends[asset.symbol];
                 const now = Date.now();
-                if (cached && cached.lastUpdated && (now - cached.lastUpdated < 60000)) {
+                if (cached && cached.lastUpdated && (now - cached.lastUpdated < 2 * 60 * 1000)) {
                     processingRef.current = false;
                     return;
                 }
@@ -204,7 +204,11 @@ export function useTrendScanner(assets: Asset[]) {
             }
         };
 
-        const interval = setInterval(processNextAsset, 250); // Speed up interval (4 assets/sec) -> ~15s for 60 assets
+        // CRITICAL: Slow down to prevent rate limiting
+        // Was 250ms = 4 assets/sec = 240 assets/min = 1440 requests/min (6 timeframes each)
+        // Now 10s = 0.1 assets/sec = 6 assets/min = 36 requests/min (6 timeframes each)
+        // This is sustainable and won't trigger IP bans
+        const interval = setInterval(processNextAsset, 10000); // 10 seconds per asset
         return () => clearInterval(interval);
     }, [assets, trends, updateAssetTrend]);
 }
