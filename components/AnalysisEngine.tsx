@@ -50,7 +50,7 @@ export default function AnalysisEngine({ isOpen = true, onToggle }: AnalysisEngi
                     {isOpen ? (
                         <h2 className="text-sm font-medium text-foreground tracking-tight flex items-center gap-2 uppercase">
                             <span className="w-1.5 h-1.5 rounded-sm bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.5)]" />
-                            Analysis Engine <span className="text-[10px] text-muted-foreground ml-2">v2.1</span>
+                            Analysis Engine <span className="text-[10px] text-muted-foreground ml-2">v2.2</span>
                         </h2>
                     ) : null}
 

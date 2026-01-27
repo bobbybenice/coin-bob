@@ -34,6 +34,9 @@ export async function fetchHistoricalData(symbol: string, interval: string = '1d
                     close: parseFloat(d[4]),
                     volume: parseFloat(d[5])
                 })) : [];
+            } else {
+                console.warn(`Futures fetch returned status ${res.status} for ${symbol}`);
+                return []; // Do not fall through to Spot
             }
         } catch (e) {
             console.error(`Futures fetch failed for ${symbol}`, e);
