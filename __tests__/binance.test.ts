@@ -17,7 +17,7 @@ describe('Futures Service Klines Caching', () => {
     const timeframe: Timeframe = '1m';
 
     // Helper to setup fetch mock
-    const setupFetchMock = (mockResponse: any[]) => {
+    const setupFetchMock = (mockResponse: (string | number)[][]) => {
         global.fetch = jest.fn(() =>
             Promise.resolve({
                 ok: true,
