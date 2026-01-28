@@ -35,3 +35,7 @@
 - [x] Fix Bollinger Band Strategy Logic
     - [x] Fix 'side' assignment in Watch state (was defaulting to LONG)
     - [x] Clarify status messages ('Testing' vs 'Approaching')
+- [x] Fix MACD Divergence Strategy Logic
+    - [x] Fix 'side' assignment in Watch state (Bearish Divergence Forming)
+- [x] Codebase Cleanup
+    - [x] Remove legacy calculations in `useTrendScanner.ts`

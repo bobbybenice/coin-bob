@@ -53,6 +53,8 @@ export function strategyMACDDivergence(candles: Candle[], options: MACDDivergenc
         }
     }
 
+
+
     if (histogramValues.length < lookbackPeriod) {
         return {
             status: 'IDLE',
@@ -144,6 +146,8 @@ export function strategyMACDDivergence(candles: Candle[], options: MACDDivergenc
         const priceIncrease = (recentPriceHigh.price - previousPriceHigh.price) / previousPriceHigh.price;
         const macdDecline = (recentMACDHigh.value - previousMACDHigh.value) / Math.abs(previousMACDHigh.value);
 
+
+
         if (priceIncrease > minDivergenceStrength && macdDecline < 0) {
             // Bearish divergence detected
             const divergenceStrength = priceIncrease + Math.abs(macdDecline);
@@ -163,6 +167,7 @@ export function strategyMACDDivergence(candles: Candle[], options: MACDDivergenc
                 takeProfit = current.close * 0.94; // 6% target
             } else if (status !== 'ENTRY') { // Don't override bullish entry
                 status = 'WATCH';
+                side = 'SHORT';
                 reason = `Bearish Divergence Forming: Awaiting MACD cross (strength: ${(divergenceStrength * 100).toFixed(1)}%)`;
             }
         }
