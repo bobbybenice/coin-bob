@@ -85,11 +85,15 @@ export function strategyBollingerBounce(candles: Candle[], options: BollingerBou
     } else if (distanceToLower < 2 && rsiValue < (rsiOversold + 5)) {
         // Approaching long setup
         status = 'WATCH';
-        reason = `Approaching Lower Band: ${distanceToLower.toFixed(1)}% away, RSI ${rsiValue.toFixed(1)}`;
+        side = 'LONG';
+        const msg = distanceToLower < 0.5 ? 'Testing Lower Band' : 'Approaching Lower Band';
+        reason = `${msg}: ${Math.abs(distanceToLower).toFixed(1)}% away, RSI ${rsiValue.toFixed(1)}`;
     } else if (distanceToUpper < 2 && rsiValue > (rsiOverbought - 5)) {
         // Approaching short setup
         status = 'WATCH';
-        reason = `Approaching Upper Band: ${distanceToUpper.toFixed(1)}% away, RSI ${rsiValue.toFixed(1)}`;
+        side = 'SHORT';
+        const msg = distanceToUpper < 0.5 ? 'Testing Upper Band' : 'Approaching Upper Band';
+        reason = `${msg}: ${Math.abs(distanceToUpper).toFixed(1)}% away, RSI ${rsiValue.toFixed(1)}`;
     }
 
     return {

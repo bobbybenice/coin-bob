@@ -32,3 +32,6 @@
     - [x] Update Data Fetching (Binance Service)
     - [x] Update Hooks (`useMarketData`, `useChartData`)
     - [x] Update UI Components (`AssetScreener`, `AnalysisEngine`)
+- [x] Fix Bollinger Band Strategy Logic
+    - [x] Fix 'side' assignment in Watch state (was defaulting to LONG)
+    - [x] Clarify status messages ('Testing' vs 'Approaching')

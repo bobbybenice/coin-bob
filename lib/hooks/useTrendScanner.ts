@@ -248,7 +248,9 @@ export function useTrendScanner(assets: Asset[]) {
             }
 
             // Adaptive batch size
-            const batchSize = isInitialScanRef.current ? 5 : 1;
+            // Initial: 5 assets (fast scan)
+            // Maintenance: 3 assets (ensure < 3 min loop for ~50 assets)
+            const batchSize = isInitialScanRef.current ? 5 : 3;
 
             // Error backoff
             const timeSinceError = Date.now() - lastErrorTimeRef.current;
