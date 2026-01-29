@@ -13,6 +13,7 @@
 - [x] UI Refinements
     - [x] Remove asset circle icon
     - [x] Fix Analyze Page Header Button Hover State
+    - [x] Implement Strategy Info Icon & Tooltip for Strategy Descriptions
 - [x] Implement Customizable Strategy Columns (User request: All timeframes, all strategies)
     - [x] Update types (`AssetTrends`, `StrategyName`)
     - [x] Update store (`visibleStrategies`)
@@ -47,3 +48,4 @@
     - [x] Update `useTrendScanner` for MTF Context
     - [x] Update `ChartInstance` & Markers
     - [x] Refine Visualization (De-clutter markers, Shorten text)
+    - [x] Improve Strategy Sensitivity (Fix Long Entry filtering issue)

@@ -14,6 +14,7 @@ export interface StrategyConfig {
     name: StrategyName;
     displayName: string;
     description: string;
+    longDescription?: string; // Detailed explanation for the info tooltip
     // Relaxed type to allow strategies with specific options + generic MTF options
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     execute: (candles: Candle[], options?: any) => StrategyResponse;
@@ -29,6 +30,7 @@ export const STRATEGIES: Record<StrategyName, StrategyConfig> = {
         name: 'RSI_MFI',
         displayName: 'RSI/MFI Confluence',
         description: 'Oversold/overbought detection using RSI and MFI confluence',
+        longDescription: 'Identifying potential reversals when both RSI and MFI are in extreme territories (Oversold < 30, Overbought > 70). Confluence increases probability.',
         execute: strategyRSIMFI,
         defaultOptions: {
             rsiPeriod: 14,
@@ -41,6 +43,7 @@ export const STRATEGIES: Record<StrategyName, StrategyConfig> = {
         name: 'BOLLINGER_BOUNCE',
         displayName: 'Bollinger Bounce',
         description: 'Mean reversion strategy using Bollinger Bands + RSI confirmation',
+        longDescription: 'Entries taken when price touches outer Bollinger Bands while RSI confirms momentum exhaustion. Targets reversion to the mean (Middle Band).',
         execute: strategyBollingerBounce,
         defaultOptions: {
             bbPeriod: 20,
@@ -54,6 +57,7 @@ export const STRATEGIES: Record<StrategyName, StrategyConfig> = {
         name: 'MACD_DIVERGENCE',
         displayName: 'MACD Divergence',
         description: 'Detects bullish/bearish divergence between price and MACD',
+        longDescription: 'Signals when price makes a new High/Low but MACD fails to confirm (Lower High/Higher Low). Strong reversal signal indicating momentum loss.',
         execute: strategyMACDDivergence,
         defaultOptions: {
             fastPeriod: 12,
@@ -67,6 +71,7 @@ export const STRATEGIES: Record<StrategyName, StrategyConfig> = {
         name: 'EMA_CROSSOVER',
         displayName: 'EMA Crossover',
         description: 'Golden cross (EMA50>EMA200) and death cross trend signals',
+        longDescription: 'Classic trend following. Golden Cross (50 > 200) for Bullish, Death Cross (50 < 200) for Bearish. Best for capturing major trend shifts.',
         execute: strategyEMACrossover,
         defaultOptions: {
             fastPeriod: 50,
@@ -78,6 +83,7 @@ export const STRATEGIES: Record<StrategyName, StrategyConfig> = {
         name: 'VOLUME_BREAKOUT',
         displayName: 'Volume Breakout',
         description: 'Volume spike (3x avg) combined with price breakouts',
+        longDescription: 'Identifies strong moves backed by institutional volume (3x Average). Validates breakouts and filters fake-outs.',
         execute: strategyVolumeBreakout,
         defaultOptions: {
             volumeMultiplier: 3,
@@ -89,6 +95,7 @@ export const STRATEGIES: Record<StrategyName, StrategyConfig> = {
         name: 'SUPPORT_RESISTANCE',
         displayName: 'Support/Resistance',
         description: 'S/R level identification and breakout/breakdown detection',
+        longDescription: 'Automatically plots key Pivot Points. Signals on confirmed Breakouts or Breakdowns of S/R levels with volume confirmation.',
         execute: strategySupportResistance,
         defaultOptions: {
             pivotLookback: 20,
@@ -103,6 +110,7 @@ export const STRATEGIES: Record<StrategyName, StrategyConfig> = {
         name: 'GOLDEN_STRATEGY',
         displayName: 'Golden Strategy (Trend Pullback)',
         description: 'High-probability trend pullback system (EMA + BB + ATR)',
+        longDescription: 'Multi-factor trend system. Requires: 1. Trend Alignment (EMA), 2. Pullback (Bollinger Band), 3. Volatility (ATR), 4. Momentum (RSI/ADX).',
         execute: strategyGolden,
         defaultOptions: {
             trendEmaPeriod: 200,
@@ -122,6 +130,7 @@ export const STRATEGIES: Record<StrategyName, StrategyConfig> = {
         name: 'ICT',
         displayName: 'ICT / SMC (Smart Money)',
         description: 'Gap detection (FVG) and Liquidity Sweep logic',
+        longDescription: 'Smart Money Concepts. Detects Fair Value Gaps (FVG) and Liquidity Sweeps. Visualizes institutional footrpints on the chart.',
         execute: strategyICT,
         defaultOptions: {}
     },
@@ -129,6 +138,7 @@ export const STRATEGIES: Record<StrategyName, StrategyConfig> = {
         name: 'CONVERGENCE_OB',
         displayName: 'Convergence-OB',
         description: 'High-probability reversal: RSI/MFI Extremes + Order Block',
+        longDescription: 'Reversal Sniper. Enters when RSI & MFI are BOTH oversold/overbought AND price reacts at a valid Order Block. High precision.',
         execute: strategyConvergenceOB,
         defaultOptions: {
             rsiOversold: 20,
@@ -141,6 +151,7 @@ export const STRATEGIES: Record<StrategyName, StrategyConfig> = {
         name: 'CONTINUATION_POI',
         displayName: 'Continuation POI (MTF)',
         description: 'Trend-following entries at unmitigated FVGs using MTF Trend',
+        longDescription: 'Trend Continuation. 1. Identifies HTF Trend (EMA 200). 2. Waits for Pullback into unmitigated Fair Value Gap aligned with trend. 3. Enters on reaction.',
         execute: strategyContinuationPOI,
         defaultOptions: {}
     }

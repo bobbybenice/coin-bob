@@ -11,6 +11,7 @@ import { getAllStrategyNames, getStrategy } from '@/lib/engine/strategies';
 import { runBacktest } from '@/lib/engine/backtester';
 import { BacktestResult } from '@/lib/types';
 import { useUserStore } from '@/lib/store';
+import { InfoTooltip } from '@/components/ui/InfoTooltip';
 import { Trophy, ChevronDown } from 'lucide-react';
 
 interface ChartInstanceProps {
@@ -335,31 +336,50 @@ export function ChartInstance({
                         <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none group-hover:text-emerald-500 transition-colors" />
                     </div>
 
-                    {/* Strategy Selector */}
-                    <div className="relative group">
-                        <select
-                            value={selectedStrategy || ''}
-                            onChange={(e) => {
-                                const newStrategy = e.target.value as StrategyName || null;
-                                // Only update internal state if NOT controlled (or update it anyway to keep in sync, but rely on prop)
-                                if (strategy === undefined) {
+                    {/* Strategy Selector & Info */}
+                    <div className="flex items-center gap-2">
+                        <div className="relative group">
+                            <select
+                                value={selectedStrategy || ''}
+                                onChange={(e) => {
+                                    const newStrategy = e.target.value as StrategyName || null;
                                     setInternalStrategy(newStrategy);
+                                    onStrategyChange?.(newStrategy);
+                                }}
+                                className="appearance-none pl-3 pr-9 py-1.5 text-xs font-medium bg-background border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500/50 hover:border-emerald-500/50 transition-colors cursor-pointer min-w-[140px]"
+                            >
+                                <option value="">No Strategy</option>
+                                {strategyNames.map((name) => {
+                                    const config = getStrategy(name);
+                                    return (
+                                        <option key={name} value={name}>
+                                            {config?.displayName || name}
+                                        </option>
+                                    );
+                                })}
+                            </select>
+                            <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none group-hover:text-emerald-500 transition-colors" />
+                        </div>
+
+                        {/* Strategy Info Tooltip */}
+                        {selectedStrategy && (
+                            <InfoTooltip
+                                position="right"
+                                content={
+                                    <div className="space-y-1.5">
+                                        <div className="font-semibold text-foreground">
+                                            {getStrategy(selectedStrategy)?.displayName}
+                                        </div>
+                                        <div className="text-muted-foreground border-b border-border/50 pb-1.5">
+                                            {getStrategy(selectedStrategy)?.description}
+                                        </div>
+                                        <div className="text-zinc-400">
+                                            {getStrategy(selectedStrategy)?.longDescription || "No detailed description available."}
+                                        </div>
+                                    </div>
                                 }
-                                onStrategyChange?.(newStrategy);
-                            }}
-                            className="appearance-none pl-3 pr-9 py-1.5 text-xs font-medium bg-background border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500/50 hover:border-emerald-500/50 transition-colors cursor-pointer min-w-[140px]"
-                        >
-                            <option value="">No Strategy</option>
-                            {strategyNames.map((name) => {
-                                const config = getStrategy(name);
-                                return (
-                                    <option key={name} value={name}>
-                                        {config?.displayName || name}
-                                    </option>
-                                );
-                            })}
-                        </select>
-                        <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none group-hover:text-emerald-500 transition-colors" />
+                            />
+                        )}
                     </div>
                 </div>
             </div>

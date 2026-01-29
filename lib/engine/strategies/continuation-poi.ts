@@ -54,8 +54,14 @@ export function strategyContinuationPOI(
 
     // 2. Identify POI (FVGs) on Current Timeframe
     // We are looking for UNMITIGATED FVGs
+    const current = candles[candles.length - 1];
+
+    // 2. Identify POI (FVGs) on Current Timeframe
+    // We are looking for UNMITIGATED FVGs, OR FVGs that are mitigated by the CURRENT candle (entry move)
     const allFVGs = detectFVGs(candles);
-    const activeFVGs = allFVGs.filter(fvg => !fvg.mitigated);
+    const activeFVGs = allFVGs.filter(fvg =>
+        !fvg.mitigated || (fvg.mitigated && fvg.end === current.time)
+    );
 
     // Sort by recency?
     // We only care about specific alignment:
@@ -75,7 +81,6 @@ export function strategyContinuationPOI(
     }
 
     // 3. Current Price Action
-    const current = candles[candles.length - 1];
     let signal: StrategyResponse['status'] = 'IDLE';
     let targetFVG = null;
 
