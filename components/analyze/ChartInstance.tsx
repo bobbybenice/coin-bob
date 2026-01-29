@@ -5,10 +5,11 @@ import { createChart, CandlestickData, Time, CandlestickSeries, ISeriesApi, crea
 import { Timeframe, StrategyName } from '@/lib/types';
 import { useChartData } from '@/lib/hooks/useChartData';
 import { useStrategyMarkers } from '@/lib/hooks/useStrategyMarkers';
+import { useMultiTimeframeData } from '@/lib/hooks/useMultiTimeframeData';
 import { useKeyLevels } from '@/lib/hooks/useKeyLevels';
 import { getAllStrategyNames, getStrategy } from '@/lib/engine/strategies';
 import { runBacktest } from '@/lib/engine/backtester';
-import { BacktestResult } from '@/lib/types'; // Import BacktestResult type
+import { BacktestResult } from '@/lib/types';
 import { useUserStore } from '@/lib/store';
 import { Trophy, ChevronDown } from 'lucide-react';
 
@@ -58,7 +59,8 @@ export function ChartInstance({
     const [backtestMarkers, setBacktestMarkers] = useState<SeriesMarker<Time>[]>([]);
 
     const { candles, isLoading, error } = useChartData(symbol, timeframe);
-    const { markers: liveMarkers, strategyStatus, sentiment } = useStrategyMarkers(candles, selectedStrategy);
+    const { multiTimeframeCandles } = useMultiTimeframeData(symbol);
+    const { markers: liveMarkers, strategyStatus, sentiment, activeZones } = useStrategyMarkers(candles, selectedStrategy, multiTimeframeCandles);
 
     // Calculate Backtest Results when in mode
     useEffect(() => {
@@ -126,6 +128,12 @@ export function ChartInstance({
             rightPriceScale: {
                 borderColor: '#27272a',
                 visible: true,
+            },
+            localization: {
+                priceFormatter: (price: number) => {
+                    if (price < 100) return price.toFixed(4);
+                    return price.toFixed(2);
+                },
             },
         });
 
@@ -210,7 +218,6 @@ export function ChartInstance({
     }, [candles, markers]);
 
     // FVG Visualization Layer
-    const { activeZones } = useStrategyMarkers(candles, selectedStrategy);
     const fvgSeriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null);
 
     useEffect(() => {

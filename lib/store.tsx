@@ -3,6 +3,7 @@
 import { useState, useEffect, createContext, useContext, ReactNode, useCallback, useMemo } from 'react';
 import { UserSettings, FilterCriteria, Timeframe, AssetTrends, StrategyName } from './types';
 import { BacktestOptions } from './engine/backtester';
+import { getAllStrategyNames } from './engine/strategies';
 
 const SETTINGS_CACHE_KEY = 'coinbob_user_settings_v1';
 const TREND_CACHE_KEY = 'coinbob_trend_cache_v3';
@@ -24,7 +25,7 @@ const DEFAULT_SETTINGS: UserSettings = {
         ictBearishFVG: false,
     },
     timeframe: '1d',
-    visibleStrategies: ['RSI_MFI', 'BOLLINGER_BOUNCE'],
+    visibleStrategies: getAllStrategyNames(),
     showKeyLevels: false,
 };
 

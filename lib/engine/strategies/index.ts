@@ -8,15 +8,15 @@ import { strategySupportResistance } from './support-resistance';
 import { strategyGolden } from './golden-strategy';
 import { strategyICT } from './ict';
 import { strategyConvergenceOB } from './convergenceOB';
-
-
-
+import { strategyContinuationPOI } from './continuation-poi';
 
 export interface StrategyConfig {
     name: StrategyName;
     displayName: string;
     description: string;
-    execute: (candles: Candle[], options?: Record<string, unknown>) => StrategyResponse;
+    // Relaxed type to allow strategies with specific options + generic MTF options
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    execute: (candles: Candle[], options?: any) => StrategyResponse;
     defaultOptions?: Record<string, unknown>;
 }
 
@@ -136,6 +136,13 @@ export const STRATEGIES: Record<StrategyName, StrategyConfig> = {
             rsiOverbought: 80,
             mfiOverbought: 80
         }
+    },
+    CONTINUATION_POI: {
+        name: 'CONTINUATION_POI',
+        displayName: 'Continuation POI (MTF)',
+        description: 'Trend-following entries at unmitigated FVGs using MTF Trend',
+        execute: strategyContinuationPOI,
+        defaultOptions: {}
     }
 };
 
@@ -159,7 +166,7 @@ export function getStrategy(name: StrategyName): StrategyConfig | undefined {
 export function executeStrategy(
     name: StrategyName,
     candles: Candle[],
-    options?: Record<string, unknown>
+    options?: Record<string, unknown> & { multiTimeframeCandles?: Record<string, Candle[]> }
 ): StrategyResponse {
     const strategy = STRATEGIES[name];
     if (!strategy) {
@@ -188,5 +195,6 @@ export {
     strategySupportResistance,
     strategyGolden,
     strategyICT,
-    strategyConvergenceOB
+    strategyConvergenceOB,
+    strategyContinuationPOI
 };

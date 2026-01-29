@@ -97,7 +97,8 @@ export type StrategyName =
     | 'SUPPORT_RESISTANCE'
     | 'GOLDEN_STRATEGY'
     | 'ICT'
-    | 'CONVERGENCE_OB';
+    | 'CONVERGENCE_OB'
+    | 'CONTINUATION_POI';
 
 export interface UserSettings {
     favorites: string[];

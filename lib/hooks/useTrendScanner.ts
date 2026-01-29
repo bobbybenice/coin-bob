@@ -96,7 +96,7 @@ export function useTrendScanner(assets: Asset[]) {
                             Object.entries(tfMap).forEach(([tf, candles]) => {
                                 if (candles.length < 50) return;
 
-                                const result = executeStrategy(strategyName, candles);
+                                const result = executeStrategy(strategyName, candles, { multiTimeframeCandles: tfMap });
 
                                 if (result.status === 'ENTRY' || result.status === 'WATCH') {
                                     const side = result.metadata?.side;

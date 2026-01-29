@@ -20,6 +20,7 @@
     - [x] Update `AnalysisEngine` with Strategy Selector
     - [x] Update `AssetScreener` and `AssetRow` for dynamic rendering
     - [x] Set defaults: RSI/MFI and Bollinger visible by default
+    - [x] Update default settings to include ALL strategies (User request)
 - [x] Implement Convergence-OB Strategy
     - [x] Strategy Logic (RSI + MFI + OB)
     - [x] Order Block Detection in `ict.ts`
@@ -37,5 +38,11 @@
     - [x] Clarify status messages ('Testing' vs 'Approaching')
 - [x] Fix MACD Divergence Strategy Logic
     - [x] Fix 'side' assignment in Watch state (Bearish Divergence Forming)
-- [x] Codebase Cleanup
-    - [x] Remove legacy calculations in `useTrendScanner.ts`
+- [x] Chart Improvements
+    - [x] Dynamic Price Formatting (<100: 4 decimals, >=100: 2 decimals)
+- [x] Implement Continuation POI Strategy (MTF)
+    - [x] Update Types & Registry
+    - [x] Create `useMultiTimeframeData` Hook
+    - [x] Implement `continuation-poi.ts` Logic
+    - [x] Update `useTrendScanner` for MTF Context
+    - [x] Update `ChartInstance` & Markers
