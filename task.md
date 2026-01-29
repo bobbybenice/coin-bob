@@ -46,3 +46,4 @@
     - [x] Implement `continuation-poi.ts` Logic
     - [x] Update `useTrendScanner` for MTF Context
     - [x] Update `ChartInstance` & Markers
+    - [x] Refine Visualization (De-clutter markers, Shorten text)

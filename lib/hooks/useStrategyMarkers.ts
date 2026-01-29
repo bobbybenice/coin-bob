@@ -19,11 +19,9 @@ export function useStrategyMarkers(
 
         const markers: SeriesMarker<Time>[] = [];
 
-        // Run strategy on rolling windows to detect all signals
-        // Note: For MTF strategies, rolling window historical simulation is tricky because we'd need historical HTF candles aligned with LTF window.
-        // Simplified approach: pass current full MTF map for context. This implies "look-ahead" bias for historical markers if the HTF candles are the "final" versions.
-        // Ideally we'd slice MTF candles too, but for now we accept the limitation for visual markers or rely on strategy to handle it (strategy handles it by looking at latest usually).
-        // Let's pass the MTF map as static context. The strategy is responsible for not peeking future if it cares, but mostly we care about live signals.
+        // Track last signal to prevent overlapping markers for strategies like Continuation POI
+        let lastSignalIndex = -1;
+        let lastSignalSide = '';
 
         for (let i = 50; i < candles.length; i++) {
             const window = candles.slice(0, i + 1);
@@ -33,6 +31,19 @@ export function useStrategyMarkers(
             if (result.status === 'ENTRY' || result.status === 'EXIT') {
                 const candle = candles[i];
                 const isLong = (result.metadata?.side === 'LONG' || result.metadata?.sweep === 'BULLISH' || (result.metadata?.fvg && result.metadata.fvg === 'BULLISH'));
+                const currentSide = isLong ? 'LONG' : 'SHORT';
+
+                // Clutter Prevention:
+                // If we are Continuation POI, we only want the FIRST signal in a sequence.
+                // If the previous candle (i-1) was also a signal of the same side, skip this one.
+                if (strategyName === 'CONTINUATION_POI') {
+                    // Check if we just fired a signal recently
+                    if (lastSignalIndex === i - 1 && lastSignalSide === currentSide) {
+                        lastSignalIndex = i; // Update index to track continuity but DON'T push marker
+                        continue;
+                    }
+                }
+
                 const isConvergence = !!result.metadata?.convergenceOB;
                 const isContinuation = strategyName === 'CONTINUATION_POI';
 
@@ -47,26 +58,26 @@ export function useStrategyMarkers(
                         color = '#00ff9d'; // Neon Green
                         shape = 'circle';
                         position = 'belowBar';
-                        text = 'DIAMOND LONG';
+                        text = 'DIAMOND';
                     } else {
                         color = '#ff0055'; // Neon Red
                         shape = 'circle';
                         position = 'aboveBar';
-                        text = 'DIAMOND SHORT';
+                        text = 'DIAMOND';
                     }
                 } else if (isContinuation) {
                     // Continuation POI
-                    // Use Arrow but maybe different text
+                    // Shortened text to reduce clutter
                     if (isLong) {
                         color = '#3b82f6'; // Blue
                         shape = 'arrowUp';
                         position = 'belowBar';
-                        text = 'PULLBACK LONG';
+                        text = 'PB LONG';
                     } else {
                         color = '#f97316'; // Orange
                         shape = 'arrowDown';
                         position = 'aboveBar';
-                        text = 'PULLBACK SHORT';
+                        text = 'PB SHORT';
                     }
                 } else if (isLong) {
                     color = '#10b981'; // Green
@@ -87,6 +98,9 @@ export function useStrategyMarkers(
                     shape,
                     text
                 });
+
+                lastSignalIndex = i;
+                lastSignalSide = currentSide;
             }
         }
 
