@@ -89,34 +89,45 @@ export default function AssetCard({
                 </div>
             </div>
 
-            {/* Active Strategy Signals (Badges) */}
-            <div className="flex flex-wrap gap-2 mb-3">
-                {settings.visibleStrategies?.map(strategy => {
-                    const stratData = trend?.strategies?.[strategy];
-                    if (!stratData) return null;
+            {/* Active Strategy Signals (Badges) - Grouped for Clarity */}
+            <div className="flex flex-col gap-2 mb-2">
+                {/* 1. Bullish Signals */}
+                <div className="flex flex-wrap gap-2">
+                    {settings.visibleStrategies?.map(strategy => {
+                        const stratData = trend?.strategies?.[strategy];
+                        if (!stratData) return null;
 
-                    // Check if any timeframe has a signal
-                    const hasLong = Object.values(stratData).some(s => s === 'LONG');
-                    const hasShort = Object.values(stratData).some(s => s === 'SHORT');
+                        // Check for Longs
+                        const hasLong = Object.values(stratData).some(s => s === 'LONG');
+                        if (!hasLong) return null;
 
-                    if (!hasLong && !hasShort) return null;
-
-                    return (
-                        <div key={strategy} className={`
-                            flex items-center gap-1.5 px-2 py-1 rounded text-[10px] font-medium border
-                            ${hasLong
-                                ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                                : 'bg-rose-500/10 text-rose-400 border-rose-500/20'
-                            }
-                        `}>
-                            {STRATEGIES[strategy]?.displayName || strategy}
-                            <div className="flex gap-0.5">
-                                {hasLong && <span className="text-[9px]">L</span>}
-                                {hasShort && <span className="text-[9px]">S</span>}
+                        return (
+                            <div key={`${strategy}-long`} className="flex items-center gap-1.5 px-2 py-1 rounded bg-emerald-500/10 border border-emerald-500/20">
+                                <span className="text-[10px] font-bold text-emerald-400">{STRATEGIES[strategy]?.displayName}</span>
+                                <span className="text-[9px] font-extrabold px-1 py-0.5 bg-emerald-500 text-black rounded-sm leading-none">LONG</span>
                             </div>
-                        </div>
-                    );
-                })}
+                        );
+                    })}
+                </div>
+
+                {/* 2. Bearish Signals */}
+                <div className="flex flex-wrap gap-2">
+                    {settings.visibleStrategies?.map(strategy => {
+                        const stratData = trend?.strategies?.[strategy];
+                        if (!stratData) return null;
+
+                        // Check for Shorts
+                        const hasShort = Object.values(stratData).some(s => s === 'SHORT');
+                        if (!hasShort) return null;
+
+                        return (
+                            <div key={`${strategy}-short`} className="flex items-center gap-1.5 px-2 py-1 rounded bg-rose-500/10 border border-rose-500/20">
+                                <span className="text-[10px] font-bold text-rose-400">{STRATEGIES[strategy]?.displayName}</span>
+                                <span className="text-[9px] font-extrabold px-1 py-0.5 bg-rose-500 text-white rounded-sm leading-none">SHORT</span>
+                            </div>
+                        );
+                    })}
+                </div>
             </div>
 
             {/* Tap to Analyze Hint */}

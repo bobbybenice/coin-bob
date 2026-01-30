@@ -56,3 +56,5 @@
     - [x] Mobile Screener Layout (Card List View)
     - [x] Responsive Navigation & Layout Adjustments
     - [x] Touch-Friendly Charts & Controls
+    - [x] Refined Mobile Signal Visibility (Card signals)
+    - [x] Optimized Header (Hidden text, Dropdown selector)

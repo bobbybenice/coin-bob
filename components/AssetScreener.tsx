@@ -229,13 +229,13 @@ export default function AssetScreener() {
 
   return (
     <div className="flex flex-col h-full bg-transparent overflow-hidden">
-      <div className="p-4 border-b border-border bg-card flex justify-between items-center shrink-0 backdrop-blur-sm">
-        <h2 className="text-lg font-medium text-foreground tracking-tight flex items-center gap-2">
+      <div className="px-3 py-2 lg:p-4 border-b border-border bg-card flex justify-between items-center shrink-0 backdrop-blur-sm">
+        <h2 className="hidden lg:flex text-lg font-medium text-foreground tracking-tight items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
           Market Screener
         </h2>
-        <div className="flex items-center gap-6">
-          <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 lg:gap-6 w-full lg:w-auto justify-between lg:justify-end">
+          <div className="flex items-center gap-2 lg:gap-4">
             {/* Timeframe Selector Moved Here */}
             <TimeframeSelector />
 
@@ -256,10 +256,10 @@ export default function AssetScreener() {
               </kbd>
             </Button>
 
-            {/* Mobile Sort Dropdown */}
+            {/* Mobile Sort Dropdown - Compact */}
             <div className="lg:hidden relative">
               <select
-                className="appearance-none pl-2 pr-6 py-1.5 text-xs font-medium bg-muted/50 border border-transparent rounded-md focus:outline-none text-muted-foreground"
+                className="appearance-none pl-2 pr-5 py-1 text-[10px] font-bold bg-muted/30 border border-transparent rounded focus:outline-none text-foreground uppercase tracking-wider"
                 onChange={(e) => {
                   const [field, dir] = e.target.value.split(':');
                   setSortField(field as SortField);
@@ -267,16 +267,29 @@ export default function AssetScreener() {
                 }}
                 value={`${sortField}:${sortDir}`}
               >
-                <option value="symbol:asc">Name (A-Z)</option>
-                <option value="price:desc">Price (High)</option>
-                <option value="price:asc">Price (Low)</option>
+                <option value="symbol:asc">Name</option>
+                <option value="price:desc">Price ↓</option>
+                <option value="price:asc">Price ↑</option>
                 <option value="bias:desc">Bias (Bull)</option>
                 <option value="bias:asc">Bias (Bear)</option>
               </select>
-              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground pointer-events-none">▼</span>
+              <div className="absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none opacity-50">
+                <svg width="6" height="6" viewBox="0 0 24 24" fill="currentColor"><path d="M7 10l5 5 5-5z" /></svg>
+              </div>
             </div>
 
-            <div className="flex items-center gap-3 text-xs font-mono">
+            {/* Condensed Mobile Status */}
+            <div className="lg:hidden flex items-center gap-1.5 ml-1">
+              <span className="text-[10px] font-mono font-bold text-muted-foreground">{filteredAssets.length}</span>
+              {isLoading ? (
+                <div className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+              ) : (
+                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+              )}
+            </div>
+
+            {/* Desktop Full Status */}
+            <div className="hidden lg:flex items-center gap-3 text-xs font-mono">
               {scanProgress.isInitialScan && scanProgress.total > 0 ? (
                 <div className="flex items-center gap-2">
                   <span className="text-blue-400 flex items-center gap-1.5 animate-pulse">
@@ -411,7 +424,7 @@ export default function AssetScreener() {
             </table>
 
             {/* Mobile Card View */}
-            <div className="lg:hidden flex flex-col gap-2 pb-20">
+            <div className="lg:hidden flex flex-col gap-2 pb-20 px-4 pt-2">
               {filteredAssets.map((asset) => (
                 <AssetCard
                   key={asset.id}

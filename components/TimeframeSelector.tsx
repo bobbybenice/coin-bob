@@ -12,11 +12,28 @@ export default function TimeframeSelector() {
     const { settings, setTimeframe } = useUserStore();
 
     return (
-        <div className="flex items-center gap-2 p-1 bg-muted/30 rounded-lg border border-border">
-            <div className="px-2 flex items-center text-muted-foreground">
+        <div className="flex items-center gap-2 lg:p-1 lg:bg-muted/30 lg:rounded-lg lg:border lg:border-border">
+            <div className="hidden lg:flex px-2 items-center text-muted-foreground">
                 <Clock className="w-3.5 h-3.5" />
             </div>
-            <div className="flex bg-muted/50 rounded-md p-0.5 gap-0.5">
+
+            {/* Mobile: Native Select */}
+            <div className="lg:hidden">
+                <select
+                    value={settings.timeframe}
+                    onChange={(e) => setTimeframe(e.target.value as Timeframe)}
+                    className="h-7 text-xs font-bold bg-transparent border-none focus:ring-0 text-foreground"
+                >
+                    {TIMEFRAMES.map((tf) => (
+                        <option key={tf} value={tf} className="bg-zinc-900">
+                            {tf.toUpperCase()}
+                        </option>
+                    ))}
+                </select>
+            </div>
+
+            {/* Desktop: Button Group */}
+            <div className="hidden lg:flex bg-muted/50 rounded-md p-0.5 gap-0.5">
                 {TIMEFRAMES.map((tf) => (
                     <Button
                         key={tf}
