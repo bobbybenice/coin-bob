@@ -200,7 +200,7 @@ export default function AnalyzePage({ params }: AnalyzePageProps) {
     }, []);
 
     return (
-        <div className="h-screen flex flex-col bg-background">
+        <div className="h-[100dvh] flex flex-col bg-background overflow-hidden relative">
             {/* Command Palette for Switching */}
             <CommandPalette
                 assets={switcherAssets}
@@ -209,11 +209,11 @@ export default function AnalyzePage({ params }: AnalyzePageProps) {
             />
 
             {/* Header */}
-            <div className="h-16 border-b border-border flex items-center justify-between px-6 bg-card shrink-0">
-                <div className="flex items-center gap-4">
+            <div className="h-14 lg:h-16 border-b border-border flex items-center justify-between px-4 lg:px-6 bg-card shrink-0 z-20">
+                <div className="flex items-center gap-2 lg:gap-4 overflow-hidden">
                     <Link
                         href="/"
-                        className="flex items-center gap-2 p-3 rounded-md hover:bg-zinc-800 transition-colors text-muted-foreground hover:text-foreground"
+                        className="flex items-center justify-center w-8 h-8 rounded-md hover:bg-zinc-800 transition-colors text-muted-foreground hover:text-foreground"
                     >
                         <ArrowLeft className="w-4 h-4" />
                     </Link>
@@ -222,93 +222,98 @@ export default function AnalyzePage({ params }: AnalyzePageProps) {
                         <Button
                             variant="ghost"
                             onClick={() => setIsSwitcherOpen(true)}
-                            className="flex items-center gap-2 text-xl font-bold text-foreground px-2 py-1 h-auto -ml-2"
+                            className="flex items-center gap-1.5 lg:gap-2 text-lg lg:text-xl font-bold text-foreground px-2 py-1 h-auto -ml-2 truncate"
                         >
                             {symbol}
-                            <ChevronDown className="w-4 h-4 text-muted-foreground opacity-50" />
+                            <ChevronDown className="w-3.5 h-3.5 lg:w-4 lg:h-4 text-muted-foreground opacity-50" />
                         </Button>
                     </div>
                 </div>
 
                 <div className="flex items-center gap-4">
-                    {/* Master Strategy Dropdown */}
-                    <div className="flex items-center gap-2">
-                        <div className="relative group min-w-[160px]">
-                            <select
-                                value={masterStrategy}
-                                onChange={(e) => handleMasterStrategyChange(e.target.value as StrategyName)}
-                                className="w-full appearance-none pl-3 pr-9 py-1.5 text-xs font-medium bg-background border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500/50 hover:border-emerald-500/50 transition-colors cursor-pointer"
-                            >
-                                <option value="" disabled>Set All Strategies...</option>
-                                {allStrategyNames.map((name) => {
-                                    const config = getStrategy(name);
-                                    return (
-                                        <option key={name} value={name}>
-                                            {config?.displayName || name}
-                                        </option>
-                                    );
-                                })}
-                            </select>
-                            <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none group-hover:text-emerald-500 transition-colors" />
-                        </div>
-                        <InfoTooltip content="Select a strategy to apply it to ALL active charts simultaneously." position="right" />
-                    </div>
-
-                    <div className="h-6 w-px bg-border" />
-
-                    {/* Scalp Mode Toggle */}
-                    <div className="flex items-center gap-1.5">
-                        <label className="flex items-center gap-1.5 cursor-pointer hover:opacity-80 transition-opacity select-none">
-                            <input
-                                type="checkbox"
-                                checked={isScalpMode}
-                                onChange={(e) => {
-                                    const enabled = e.target.checked;
-                                    setIsScalpMode(enabled);
-                                    if (enabled) {
-                                        setStrategies([strategies[0], strategies[0], strategies[0]]);
-                                    }
-                                }}
-                                className="w-3.5 h-3.5 rounded border-zinc-600 bg-transparent text-emerald-500 focus:ring-0 focus:ring-offset-0"
-                            />
-                            <span className="text-xs font-medium text-muted-foreground">Scalp Mode</span>
-                        </label>
-                        <InfoTooltip content="Instantly switch to 3-chart scalping layout: 1H, 15m, and 5m timeframes for rapid multi-timeframe analysis." position="right" />
-                    </div>
-
-                    <div className="h-6 w-px bg-border" />
-
-                    {/* Chart Count */}
-                    <div className="flex items-center gap-1.5">
-                        <div className={`flex items-center bg-muted p-1 rounded-lg border border-border/50 gap-1 ${isScalpMode ? 'opacity-50 pointer-events-none' : ''}`}>
-                            {Array.from({ length: 3 }, (_, i) => i + 1).map((count) => (
-                                <Button
-                                    key={count}
-                                    onClick={() => handleChartCountChange(count as 1 | 2 | 3)}
-                                    variant={(!isScalpMode && chartCount === count) || (isScalpMode && count === 3) ? 'emerald' : 'ghost'}
-                                    size="sm"
-                                    className={`px-4 py-2 text-xs font-bold rounded-md transition-all duration-200 h-auto ${chartCount === count
-                                        ? 'shadow-sm ring-1 ring-emerald-500'
-                                        : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
-                                        }`}
+                    {/* Desktop Controls (Hidden on Mobile) */}
+                    <div className="hidden lg:flex items-center gap-4">
+                        {/* Master Strategy Dropdown */}
+                        <div className="flex items-center gap-2">
+                            {/* ... existing desktop strategy selector ... */}
+                            <div className="relative group min-w-[160px]">
+                                <select
+                                    value={masterStrategy}
+                                    onChange={(e) => handleMasterStrategyChange(e.target.value as StrategyName)}
+                                    className="w-full appearance-none pl-3 pr-9 py-1.5 text-xs font-medium bg-background border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500/50 hover:border-emerald-500/50 transition-colors cursor-pointer"
                                 >
-                                    {count}
-                                </Button>
-                            ))}
+                                    <option value="" disabled>Set All Strategies...</option>
+                                    {allStrategyNames.map((name) => {
+                                        const config = getStrategy(name);
+                                        return (
+                                            <option key={name} value={name}>
+                                                {config?.displayName || name}
+                                            </option>
+                                        );
+                                    })}
+                                </select>
+                                <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none group-hover:text-emerald-500 transition-colors" />
+                            </div>
+                            <InfoTooltip content="Select a strategy to apply it to ALL active charts simultaneously." position="right" />
                         </div>
-                        <InfoTooltip content="Choose how many charts to display side-by-side. New charts inherit the strategy from Chart 1." position="right" />
+
+                        <div className="h-6 w-px bg-border" />
+
+                        {/* Scalp Mode */}
+                        <div className="flex items-center gap-1.5">
+                            <label className="flex items-center gap-1.5 cursor-pointer hover:opacity-80 transition-opacity select-none">
+                                <input
+                                    type="checkbox"
+                                    checked={isScalpMode}
+                                    onChange={(e) => {
+                                        const enabled = e.target.checked;
+                                        setIsScalpMode(enabled);
+                                        if (enabled) {
+                                            setStrategies([strategies[0], strategies[0], strategies[0]]);
+                                        }
+                                    }}
+                                    className="w-3.5 h-3.5 rounded border-zinc-600 bg-transparent text-emerald-500 focus:ring-0 focus:ring-offset-0"
+                                />
+                                <span className="text-xs font-medium text-muted-foreground">Scalp Mode</span>
+                            </label>
+                            <InfoTooltip content="Instantly switch to 3-chart scalping layout: 1H, 15m, and 5m timeframes for rapid multi-timeframe analysis." position="right" />
+                        </div>
+
+                        <div className="h-6 w-px bg-border" />
+
+                        {/* Chart Count */}
+                        <div className="flex items-center gap-1.5">
+                            <div className={`flex items-center bg-muted p-1 rounded-lg border border-border/50 gap-1 ${isScalpMode ? 'opacity-50 pointer-events-none' : ''}`}>
+                                {Array.from({ length: 3 }, (_, i) => i + 1).map((count) => (
+                                    <Button
+                                        key={count}
+                                        onClick={() => handleChartCountChange(count as 1 | 2 | 3)}
+                                        variant={(!isScalpMode && chartCount === count) || (isScalpMode && count === 3) ? 'emerald' : 'ghost'}
+                                        size="sm"
+                                        className={`px-4 py-2 text-xs font-bold rounded-md transition-all duration-200 h-auto ${chartCount === count
+                                            ? 'shadow-sm ring-1 ring-emerald-500'
+                                            : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
+                                            }`}
+                                    >
+                                        {count}
+                                    </Button>
+                                ))}
+                            </div>
+                            <InfoTooltip content="Choose how many charts to display side-by-side. New charts inherit the strategy from Chart 1." position="right" />
+                        </div>
+
+                        <div className="h-6 w-px bg-border" />
                     </div>
 
-                    <div className="h-6 w-px bg-border" />
 
                     <BacktestControls />
                 </div>
             </div>
 
             {/* Main Layout: Charts + Sidebar */}
-            <div className="flex-1 flex overflow-hidden">
+            <div className="flex-1 flex flex-col lg:flex-row overflow-hidden relative">
                 {/* Charts Area */}
-                <div className="flex-1 relative">
+                <div className="flex-1 relative h-full">
                     <MultiChartView
                         symbol={symbol}
                         chartCount={chartCount}
@@ -319,9 +324,12 @@ export default function AnalyzePage({ params }: AnalyzePageProps) {
                     />
                 </div>
 
-                {/* Analysis Sidebar */}
+                {/* Analysis Sidebar: Hidden on Mobile defaults, Stacked or hidden */}
                 <div
-                    className={`border-l border-border h-full bg-card shrink-0 z-10 transition-all duration-300 ease-in-out ${isSidebarOpen ? 'w-[320px]' : 'w-[60px]'}`}
+                    className={`
+                        hidden lg:block border-l border-border bg-card shrink-0 z-10 transition-all duration-300 ease-in-out
+                        ${isSidebarOpen ? 'w-[320px]' : 'w-[60px]'}
+                    `}
                 >
                     <AnalysisEngine
                         isOpen={isSidebarOpen}

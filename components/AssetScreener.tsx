@@ -8,6 +8,7 @@ import TimeframeSelector from '@/components/TimeframeSelector';
 import { useTrendScanner } from '@/lib/hooks/useTrendScanner';
 import CommandPalette from './ui/CommandPalette';
 import AssetRow from './ui/AssetRow';
+import AssetCard from './ui/AssetCard';
 import { Button } from './ui/Button';
 import { useRouter } from 'next/navigation';
 import { STRATEGIES } from '@/lib/engine/strategies';
@@ -249,11 +250,31 @@ export default function AssetScreener() {
               className="flex items-center gap-2 bg-muted/50 border-transparent hover:border-border group text-muted-foreground hover:text-foreground"
             >
               <Search className="w-3.5 h-3.5" />
-              <span className="text-xs font-medium">Search</span>
+              <span className="hidden lg:inline text-xs font-medium">Search</span>
               <kbd className="hidden lg:inline-flex h-5 items-center gap-1 rounded bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100 group-hover:text-foreground">
                 <span className="text-xs">A-Z</span>
               </kbd>
             </Button>
+
+            {/* Mobile Sort Dropdown */}
+            <div className="lg:hidden relative">
+              <select
+                className="appearance-none pl-2 pr-6 py-1.5 text-xs font-medium bg-muted/50 border border-transparent rounded-md focus:outline-none text-muted-foreground"
+                onChange={(e) => {
+                  const [field, dir] = e.target.value.split(':');
+                  setSortField(field as SortField);
+                  setSortDir(dir as SortDirection);
+                }}
+                value={`${sortField}:${sortDir}`}
+              >
+                <option value="symbol:asc">Name (A-Z)</option>
+                <option value="price:desc">Price (High)</option>
+                <option value="price:asc">Price (Low)</option>
+                <option value="bias:desc">Bias (Bull)</option>
+                <option value="bias:asc">Bias (Bear)</option>
+              </select>
+              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground pointer-events-none">▼</span>
+            </div>
 
             <div className="flex items-center gap-3 text-xs font-mono">
               {scanProgress.isInitialScan && scanProgress.total > 0 ? (
@@ -302,51 +323,97 @@ export default function AssetScreener() {
             <p className="text-xs font-mono tracking-widest uppercase">Initializing Uplink...</p>
           </div>
         ) : (
-          <table className="w-full text-left border-collapse">
-            <thead className="sticky top-0 z-20 bg-background/80 backdrop-blur-md shadow-sm border-b border-border">
-              <tr>
-                <th
-                  className="py-3 px-2 lg:px-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider cursor-pointer hover:text-zinc-300 transition-colors select-none whitespace-nowrap"
-                  onClick={() => handleSort('symbol')}
-                >
-                  Asset <SortIcon field="symbol" />
-                </th>
-                <th
-                  className="py-3 px-4 w-[120px] text-xs font-semibold text-zinc-500 uppercase tracking-wider text-right cursor-pointer hover:text-zinc-300 transition-colors select-none"
-                  onClick={() => handleSort('price')}
-                >
-                  Price <SortIcon field="price" />
-                </th>
-
-                {/* REMOVED: 24h% / Vol / Funding / Open Interest */}
-                {/* REMOVED: Trend / RSI / MFI */}
-
-                {/* Dynamic Strategy Columns */}
-                {settings.visibleStrategies?.map((strategy) => (
+          <>
+            {/* Desktop Table View */}
+            <table className="hidden lg:table w-full text-left border-collapse">
+              <thead className="sticky top-0 z-20 bg-background/80 backdrop-blur-md shadow-sm border-b border-border">
+                <tr>
                   <th
-                    key={strategy}
-                    className="py-3 px-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider text-center cursor-pointer hover:text-zinc-300 transition-colors select-none"
-                    onClick={() => handleSort(strategy as SortField)}
+                    className="py-3 px-2 lg:px-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider cursor-pointer hover:text-zinc-300 transition-colors select-none whitespace-nowrap"
+                    onClick={() => handleSort('symbol')}
                   >
-                    {STRATEGIES[strategy]?.displayName || strategy} <SortIcon field={strategy as SortField} />
+                    Asset <SortIcon field="symbol" />
                   </th>
+                  <th
+                    className="py-3 px-4 w-[120px] text-xs font-semibold text-zinc-500 uppercase tracking-wider text-right cursor-pointer hover:text-zinc-300 transition-colors select-none"
+                    onClick={() => handleSort('price')}
+                  >
+                    Price <SortIcon field="price" />
+                  </th>
+
+                  {/* REMOVED: 24h% / Vol / Funding / Open Interest */}
+                  {/* REMOVED: Trend / RSI / MFI */}
+
+                  {/* Dynamic Strategy Columns */}
+                  {settings.visibleStrategies?.map((strategy) => (
+                    <th
+                      key={strategy}
+                      className="py-3 px-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider text-center cursor-pointer hover:text-zinc-300 transition-colors select-none"
+                      onClick={() => handleSort(strategy as SortField)}
+                    >
+                      {STRATEGIES[strategy]?.displayName || strategy} <SortIcon field={strategy as SortField} />
+                    </th>
+                  ))}
+
+                  <th
+                    className="py-3 px-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider text-center border-l border-white/5 bg-black/20 cursor-pointer hover:text-zinc-300 transition-colors select-none"
+                    onClick={() => handleSort('bias')}
+                  >
+                    BIAS <SortIcon field="bias" />
+                  </th>
+
+                  <th className="py-3 px-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider text-center">
+                    Analyze
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/5">
+                {filteredAssets.map((asset) => (
+                  <AssetRow
+                    key={asset.id}
+                    asset={asset}
+                    trend={trends[asset.symbol]}
+                    isActive={activeAsset === asset.symbol}
+                    settings={settings}
+                    onAnalyze={(symbol) => router.push(`/analyze/${symbol}`)}
+                  />
                 ))}
 
-                <th
-                  className="py-3 px-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider text-center border-l border-white/5 bg-black/20 cursor-pointer hover:text-zinc-300 transition-colors select-none"
-                  onClick={() => handleSort('bias')}
-                >
-                  BIAS <SortIcon field="bias" />
-                </th>
+                {filteredAssets.length === 0 && (
+                  <tr>
+                    <td colSpan={10} className="py-20 text-center text-muted-foreground">
+                      <div className="flex flex-col items-center gap-2">
+                        {isLoading ? (
+                          <>
+                            <div className="w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+                            <p className="text-sm font-medium animate-pulse">Syncing {settings.timeframe} data...</p>
+                          </>
+                        ) : assets.length === 0 ? (
+                          <>
+                            <span className="text-2xl opacity-20">⚠</span>
+                            <p className="text-sm font-medium">Data Unavailable</p>
+                            <p className="text-xs text-muted-foreground w-64">
+                              Unable to fetch Futures data. This may be due to regional restrictions or API limits.
+                            </p>
+                          </>
+                        ) : (
+                          <>
+                            <span className="text-2xl opacity-20">∅</span>
+                            <p className="text-sm font-medium">No assets match your criteria</p>
+                            <p className="text-xs text-muted-foreground">Try adjusting the filters in the Analysis Engine</p>
+                          </>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
 
-                <th className="py-3 px-4 text-xs font-semibold text-zinc-500 uppercase tracking-wider text-center">
-                  Analyze
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-white/5">
+            {/* Mobile Card View */}
+            <div className="lg:hidden flex flex-col gap-2 pb-20">
               {filteredAssets.map((asset) => (
-                <AssetRow
+                <AssetCard
                   key={asset.id}
                   asset={asset}
                   trend={trends[asset.symbol]}
@@ -355,37 +422,14 @@ export default function AssetScreener() {
                   onAnalyze={(symbol) => router.push(`/analyze/${symbol}`)}
                 />
               ))}
-
               {filteredAssets.length === 0 && (
-                <tr>
-                  <td colSpan={10} className="py-20 text-center text-muted-foreground">
-                    <div className="flex flex-col items-center gap-2">
-                      {isLoading ? (
-                        <>
-                          <div className="w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
-                          <p className="text-sm font-medium animate-pulse">Syncing {settings.timeframe} data...</p>
-                        </>
-                      ) : assets.length === 0 ? (
-                        <>
-                          <span className="text-2xl opacity-20">⚠</span>
-                          <p className="text-sm font-medium">Data Unavailable</p>
-                          <p className="text-xs text-muted-foreground w-64">
-                            Unable to fetch Futures data. This may be due to regional restrictions or API limits.
-                          </p>
-                        </>
-                      ) : (
-                        <>
-                          <span className="text-2xl opacity-20">∅</span>
-                          <p className="text-sm font-medium">No assets match your criteria</p>
-                          <p className="text-xs text-muted-foreground">Try adjusting the filters in the Analysis Engine</p>
-                        </>
-                      )}
-                    </div>
-                  </td>
-                </tr>
+                <div className="py-20 text-center text-muted-foreground flex flex-col items-center gap-2">
+                  <span className="text-2xl opacity-20">∅</span>
+                  <p className="text-sm font-medium">No assets match your criteria</p>
+                </div>
               )}
-            </tbody>
-          </table>
+            </div>
+          </>
         )}
       </div>
 

@@ -14,9 +14,9 @@ export default function Home() {
   const [isAnalysisOpen, setIsAnalysisOpen] = useState(false);
 
   return (
-    <div className="h-screen max-h-screen bg-background font-sans text-foreground selection:bg-emerald-500/30 overflow-hidden flex flex-col">
+    <div className="h-[100dvh] max-h-[100dvh] bg-background font-sans text-foreground selection:bg-emerald-500/30 overflow-hidden flex flex-col">
       {/* Mobile Top Bar */}
-      <div className="lg:hidden h-14 border-b border-border flex items-center justify-between px-4 shrink-0">
+      <div className="lg:hidden h-14 border-b border-border flex items-center justify-between px-4 shrink-0 bg-card/80 backdrop-blur-md z-30">
         <div className="font-bold text-lg tracking-tight flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
           CoinBob
@@ -64,26 +64,27 @@ export default function Home() {
         </div>
 
         {/* MOBILE LAYOUT (Tabs) - Hidden on Desktop */}
-        <div className="lg:hidden h-full w-full">
+        <div className="lg:hidden h-full w-full overflow-hidden">
           {mobileTab === 'market' && (
-            <div className="h-full w-full">
+            <div className="h-full w-full overflow-hidden">
               <AssetScreener />
             </div>
           )}
           {mobileTab === 'analysis' && (
-            <div className="h-full w-full bg-card">
-              <AnalysisEngine />
+            <div className="h-full w-full bg-card overflow-auto">
+              {/* Force Analysis to be always open/visible in mobile tab */}
+              <AnalysisEngine isOpen={true} onToggle={() => { }} />
             </div>
           )}
           {mobileTab === 'intel' && (
-            <div className="h-full w-full flex flex-col bg-muted/10">
-              <div className="h-[35%] overflow-hidden border-b border-border">
+            <div className="h-full w-full flex flex-col bg-muted/10 overflow-auto">
+              <div className="h-[300px] shrink-0 border-b border-border bg-card">
                 <BobAIAdvisor />
               </div>
-              <div className="h-[30%] overflow-hidden border-b border-border">
+              <div className="h-[250px] shrink-0 border-b border-border bg-card">
                 <WhaleTracker />
               </div>
-              <div className="flex-1 overflow-hidden">
+              <div className="flex-1 min-h-[400px] bg-card">
                 <NewsFeed />
               </div>
             </div>
@@ -92,7 +93,7 @@ export default function Home() {
       </div>
 
       {/* Mobile Bottom Navigation */}
-      <div className="lg:hidden h-16 border-t border-border bg-card flex items-center justify-around shrink-0 pb-safe">
+      <div className="lg:hidden border-t border-border bg-card/90 backdrop-blur flex items-center justify-around shrink-0 pb-[env(safe-area-inset-bottom)] pt-2 h-[calc(60px+env(safe-area-inset-bottom))] z-50">
         <button
           onClick={() => setMobileTab('market')}
           className={`flex flex-col items-center gap-1 p-2 rounded-lg transition-colors ${mobileTab === 'market' ? 'text-emerald-500' : 'text-muted-foreground hover:text-foreground'}`}
